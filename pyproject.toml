@@ -1,0 +1,55 @@
+[project]
+name = "dug-data-model"
+version = "0.1.0"
+description = "Reusable data model for Dug"
+readme = { file = "README.md", content-type = "text/markdown" }
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+authors = [
+  { name = "Griffin Roupe", email = "groupe@renci.org" },
+]
+
+dependencies = [
+  "pydantic>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pip-tools>=7.5.2",
+  "pytest>=8.0.0",
+  "pytest-cov>=5.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/helxplatform/dug-data-model"
+Repository = "https://github.com/helxplatform/dug-data-model"
+"Bug Tracker" = "https://github.com/helxplatform/dug-data-model/issues"
+
+[build-system]
+requires = ["hatchling", "pydantic>=2.0.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/dug_data_model"]
+
+[tool.hatch.build.targets.wheel.hooks.custom]
+path = "src/dug_data_model/scaffold/build_hook.py"
+
+[tool.hatch.build.targets.sdist.hooks.custom]
+path = "src/dug_data_model/scaffold/build_hook.py"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--tb=short"
+
+[tool.ruff]
+src = ["src"]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src"]
