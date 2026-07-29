@@ -1,7 +1,7 @@
 """Validation utilities for the Dug data model.
 
 This module provides functions for validating collections of DugElement objects,
-including uniqueness checks, hierarchy validation, and reference integrity.
+including uniqueness checks.
 """
 
 from __future__ import annotations
@@ -48,57 +48,6 @@ def find_duplicate_ids(elements: Iterable[DugElement]) -> dict[str, int]:
     return {id_: count for id_, count in seen.items() if count > 1}
 
 
-def find_missing_parents(elements: Iterable[DugElement]) -> set[str]:
-    """Find parent IDs that don't exist in the element collection.
-
-    Args:
-        elements: An iterable of DugElement objects.
-
-    Returns:
-        A set of missing parent IDs. Empty set if all parents exist.
-    """
-    elements_list = list(elements)
-    all_ids = {elem.id for elem in elements_list}
-    missing: set[str] = set()
-
-    for elem in elements_list:
-        for parent_id in elem.parents:
-            if parent_id not in all_ids:
-                missing.add(parent_id)
-
-    return missing
-
-
-def find_missing_list_references(elements: Iterable[DugElement]) -> set[str]:
-    """Find variable_list and section_list IDs that don't exist.
-
-    Checks DugStudy.variable_list, DugStudy.section_list, and
-    DugSection.variable_list for references to non-existent elements.
-
-    Args:
-        elements: An iterable of DugElement objects.
-
-    Returns:
-        A set of missing reference IDs. Empty set if all references exist.
-    """
-    elements_list = list(elements)
-    all_ids = {elem.id for elem in elements_list}
-    missing: set[str] = set()
-
-    for elem in elements_list:
-        if hasattr(elem, "variable_list"):
-            for var_id in elem.variable_list:
-                if var_id not in all_ids:
-                    missing.add(var_id)
-
-        if hasattr(elem, "section_list"):
-            for sec_id in elem.section_list:
-                if sec_id not in all_ids:
-                    missing.add(sec_id)
-
-    return missing
-
-
 def validate_unique_ids(elements: Iterable[DugElement]) -> None:
     """Validate that all element IDs are unique.
 
@@ -113,29 +62,3 @@ def validate_unique_ids(elements: Iterable[DugElement]) -> None:
         raise DuplicateIdError(duplicates)
 
 
-def validate_parent_references(elements: Iterable[DugElement]) -> None:
-    """Validate that all parent references point to existing elements.
-
-    Args:
-        elements: An iterable of DugElement objects.
-
-    Raises:
-        MissingReferenceError: If any parent IDs don't exist.
-    """
-    missing = find_missing_parents(elements)
-    if missing:
-        raise MissingReferenceError(missing, "parent")
-
-
-def validate_list_references(elements: Iterable[DugElement]) -> None:
-    """Validate that variable_list and section_list references exist.
-
-    Args:
-        elements: An iterable of DugElement objects.
-
-    Raises:
-        MissingReferenceError: If any referenced IDs don't exist.
-    """
-    missing = find_missing_list_references(elements)
-    if missing:
-        raise MissingReferenceError(missing, "variable/section list")
