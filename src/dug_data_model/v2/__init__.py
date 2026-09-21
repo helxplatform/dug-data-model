@@ -5,6 +5,7 @@ from .study import STUDY_TYPE, DugStudy
 from .section import SECTION_TYPE, DugSection
 from .document import DOCUMENT_KINDS, DOCUMENT_TYPE, DugDocument
 from .document_section import DOCUMENT_SECTION_TYPE, DugDocumentSection
+from .resource import RESOURCE_KINDS, RESOURCE_TYPE, DugResource
 from .types import (
     InputFile,
     Indexable,
@@ -43,6 +44,7 @@ DugStudy.model_rebuild()
 DugSection.model_rebuild()
 DugDocument.model_rebuild()
 DugDocumentSection.model_rebuild()
+DugResource.model_rebuild()
 
 __all__ = [
     # Core classes
@@ -53,6 +55,7 @@ __all__ = [
     "DugSection",
     "DugDocument",
     "DugDocumentSection",
+    "DugResource",
     # Type definitions
     "Indexable",
     "Parser",
@@ -68,6 +71,8 @@ __all__ = [
     "DOCUMENT_TYPE",
     "DOCUMENT_SECTION_TYPE",
     "DOCUMENT_KINDS",
+    "RESOURCE_TYPE",
+    "RESOURCE_KINDS",
     # Filtering and grouping
     "filter_by_type",
     "group_by_type",
