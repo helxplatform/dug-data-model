@@ -66,6 +66,65 @@ data = json.loads("""
 elements = DugElementParsedList.validate_python(data)
 ```
 
+### Documents and the resources they come from
+
+Studies often come with files that are not data dictionaries: READMEs, protocols, final
+reports, posters. These are modelled as a `DugDocument` whose text is held in
+`DugDocumentSection` children, optionally under the `DugResource` (e.g. a Zenodo dataset)
+the file was downloaded from:
+
+```python
+from dug_data_model.v2 import DugDocument, DugDocumentSection, DugResource, DugStudy
+
+dataset = DugResource(
+    id="HDP1/resources/zenodo-1",
+    name="Pain behaviour in mice: data and methods",
+    description="Behavioural data and analysis notes.",
+    action="https://zenodo.org/records/1",   # landing page
+    resource_type="dataset",                 # see RESOURCE_KINDS
+    repository="zenodo",
+    doi="10.5281/zenodo.1",
+    license="CC-BY-4.0",
+    parents=["HDP1"], parent_type="study",
+    document_list=["HDP1/assets/README.docx"],
+)
+
+readme = DugDocument(
+    id="HDP1/assets/README.docx",
+    name="README.docx",                      # display title
+    description="",
+    action="https://zenodo.org/records/1",
+    file_name="README.docx",
+    mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    document_type="readme",                  # see DOCUMENT_KINDS
+    license="CC-BY-4.0",
+    can_display_content=True,                # False: index the text, but link out instead
+    parents=[dataset.id], parent_type="resource",
+    section_list=["HDP1/assets/README.docx/general-methods"],
+)
+
+section = DugDocumentSection(
+    id="HDP1/assets/README.docx/general-methods",
+    name="General Methods",                  # the heading
+    description="This repository contains ...",  # the text under it
+    position=0, level=1,
+    parents=[readme.id], parent_type="document",
+)
+
+study = DugStudy(
+    id="HDP1", name="A study", description="...",
+    resource_list=[dataset.id], document_list=[readme.id],
+)
+```
+
+An element has a single `parent_type`, so a document's parent is either its resource or,
+when it did not come from a known resource, its study. `DugStudy.document_list` lists every
+document in the study either way. `validate_references()` checks that all of these IDs
+resolve within a collection.
+
+`document_type` and `resource_type` are free strings; `DOCUMENT_KINDS` and `RESOURCE_KINDS`
+list the recommended values.
+
 ## Scaffold: Creating a New Model Version
 
 Use the scaffold CLI to generate a new data model version inside the package:
@@ -188,6 +247,9 @@ python -m dug_data_model.scaffold schema v2 --format markdown -o SCHEMA.md
 | `DugVariable` | `"variable"` | A data variable (e.g., dbGaP variable or CDE) |
 | `DugStudy` | `"study"` | A research study or dataset |
 | `DugSection` | `"section"` | A section or instrument within a study |
+| `DugResource` | `"resource"` | Something external with a URL and a description, usually the repository deposit (dataset) a study's files came from |
+| `DugDocument` | `"document"` | A textual file attached to a study (README, protocol, report, poster, ...) |
+| `DugDocumentSection` | `"document_section"` | A headed piece of text within a `DugDocument` |
 
 ## Development
 
