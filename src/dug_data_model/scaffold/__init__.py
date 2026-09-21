@@ -109,6 +109,8 @@ from .validation import (
     DuplicateIdError,
     MissingReferenceError,
     find_duplicate_ids,
+    find_missing_references,
+    validate_references,
     validate_unique_ids,
 )
 
@@ -145,5 +147,7 @@ __all__ = [
     "DuplicateIdError",
     "MissingReferenceError",
     "find_duplicate_ids",
+    "find_missing_references",
+    "validate_references",
     "validate_unique_ids",
 ]

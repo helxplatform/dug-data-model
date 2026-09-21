@@ -62,3 +62,45 @@ def validate_unique_ids(elements: Iterable[DugElement]) -> None:
         raise DuplicateIdError(duplicates)
 
 
+def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str]]:
+    """Find IDs that elements refer to but that are not in the collection.
+
+    An element refers to others through `parents` and through any field whose name ends in
+    `_list` (e.g. `variable_list`, `section_list`, `document_list`).
+
+    Args:
+        elements: An iterable of DugElement objects.
+
+    Returns:
+        A dict mapping each referring field name to the set of IDs it refers to that are
+        missing. Empty dict if every reference resolves.
+    """
+    all_elements = list(elements)
+    known_ids = {elem.id for elem in all_elements}
+    missing: dict[str, set[str]] = {}
+    for elem in all_elements:
+        for field_name in type(elem).model_fields:
+            if field_name != "parents" and not field_name.endswith("_list"):
+                continue
+            for ref in getattr(elem, field_name):
+                if ref not in known_ids:
+                    missing.setdefault(field_name, set()).add(ref)
+    return missing
+
+
+def validate_references(elements: Iterable[DugElement]) -> None:
+    """Validate that every parent and `*_list` reference points at an element in the collection.
+
+    This is opt-in rather than part of loading, because a producer may legitimately split
+    related elements across several files.
+
+    Args:
+        elements: An iterable of DugElement objects.
+
+    Raises:
+        MissingReferenceError: If any referenced ID is not in the collection.
+    """
+    missing = find_missing_references(elements)
+    if missing:
+        all_missing = set().union(*missing.values())
+        raise MissingReferenceError(all_missing, reference_type="/".join(sorted(missing)))
