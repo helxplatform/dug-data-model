@@ -78,6 +78,9 @@ A headed section of a `DugDocument`.
 `name` is the heading and `description` is the body text under it. `parents` holds the ID
 of the containing document, with `parent_type` set to 'document'.
 
+`can_display_content` should be copied from the parent document, so that a section can be
+shown or withheld without looking its document up.
+
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `id` | `str` | Yes | - |  |
@@ -96,6 +99,7 @@ of the containing document, with `parent_type` set to 'document'.
 | `position` | `int` | No | `0` | 0-based order of this section within its document. |
 | `level` | `int` | No | `None` | Heading depth (1 = top level) when the source format exposes it. |
 | `page` | `int` | No | `None` | 1-based page this section starts on, for paginated formats. |
+| `can_display_content` | `bool` | No | `False` | Copy of the parent DugDocument's can_display_content. When False, the body text is indexed but left out of API responses. |
 
 ## DugResource
 

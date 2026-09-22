@@ -255,7 +255,7 @@
       "type": "object"
     },
     "DugDocumentSection": {
-      "description": "A headed section of a `DugDocument`.\n\n`name` is the heading and `description` is the body text under it. `parents` holds the ID\nof the containing document, with `parent_type` set to 'document'.",
+      "description": "A headed section of a `DugDocument`.\n\n`name` is the heading and `description` is the body text under it. `parents` holds the ID\nof the containing document, with `parent_type` set to 'document'.\n\n`can_display_content` should be copied from the parent document, so that a section can be\nshown or withheld without looking its document up.",
       "properties": {
         "id": {
           "title": "Id",
@@ -367,6 +367,12 @@
           "default": null,
           "description": "1-based page this section starts on, for paginated formats.",
           "title": "Page"
+        },
+        "can_display_content": {
+          "default": false,
+          "description": "Copy of the parent DugDocument's can_display_content. When False, the body text is indexed but left out of API responses.",
+          "title": "Can Display Content",
+          "type": "boolean"
         }
       },
       "required": [
