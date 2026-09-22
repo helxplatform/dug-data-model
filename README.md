@@ -69,12 +69,20 @@ elements = DugElementParsedList.validate_python(data)
 ### Documents and the resources they come from
 
 Studies often come with files that are not data dictionaries: READMEs, protocols, final
-reports, posters. These are modelled as a `DugDocument` whose text is held in
-`DugDocumentSection` children, optionally under the `DugResource` (e.g. a Zenodo dataset)
-the file was downloaded from:
+reports, posters. Three element types describe them, one per level:
+
+- **`DugResource`** — something outside Dug with a URL: chiefly the repository deposit (e.g. a
+  Zenodo dataset) that a study's files were downloaded from, but also a program website, a
+  software repository or a publication.
+- **`DugDocument`** — a resource that is a single file. It subclasses `DugResource`, so it has
+  the same title, description, link, `repository`, `authors`, `doi` and `license`, and adds
+  `file_name`, `mime_type` and `document_type`. A document holds **no text of its own**.
+- **`DugContent`** — a piece of a document's text: a heading (`name`) and the body under it
+  (`description`). This is the only element that carries text, and therefore the only one
+  with `can_display_content`.
 
 ```python
-from dug_data_model.v2 import DugDocument, DugDocumentSection, DugResource, DugStudy
+from dug_data_model.v2 import DugContent, DugDocument, DugResource, DugStudy
 
 dataset = DugResource(
     id="HDP1/resources/zenodo-1",
@@ -94,21 +102,21 @@ readme = DugDocument(
     name="README.docx",                      # display title
     description="",
     action="https://zenodo.org/records/1",
+    repository="zenodo",                     # inherited from DugResource, like license
+    license="CC-BY-4.0",                     # the deposit's licence unless the file states its own
     file_name="README.docx",
     mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    document_type="readme",                  # see DOCUMENT_KINDS
-    license="CC-BY-4.0",
-    can_display_content=True,                # False: index the text, but link out instead
+    document_type="readme",                  # see DOCUMENT_KINDS; resource_type is always "document"
     parents=[dataset.id], parent_type="resource",
-    section_list=["HDP1/assets/README.docx/general-methods"],
+    content_list=["HDP1/assets/README.docx/general-methods"],
 )
 
-section = DugDocumentSection(
+section = DugContent(
     id="HDP1/assets/README.docx/general-methods",
     name="General Methods",                  # the heading
     description="This repository contains ...",  # the text under it
     position=0, level=1,
-    can_display_content=readme.can_display_content,  # copied from the document
+    can_display_content=True,                # the producer decides this from readme.license
     parents=[readme.id], parent_type="document",
 )
 
@@ -123,9 +131,13 @@ when it did not come from a known resource, its study. `DugStudy.document_list` 
 document in the study either way. `validate_references()` checks that all of these IDs
 resolve within a collection.
 
-Copy `can_display_content` from each document onto its sections. A section's
-`get_response_dict()` blanks its `description` unless `can_display_content` is True, so the
-text of a document that may not be displayed is still indexed but never returned to users.
+Text and the right to show it live in the same place. A document has nothing to display, so it
+has no display flag; each `DugContent` says for itself whether its text may be shown, and its
+`get_response_dict()` blanks `description` unless `can_display_content` is True. The text is
+still indexed, so a search can find a document whose text may not be shown, and the UI can
+send the user to `action` instead. A producer sets the flag from the document's licence when
+it emits the content; there is no second copy to keep in step. A file whose format nothing can
+read is still a document, just one with no content.
 
 `document_type` and `resource_type` are free strings; `DOCUMENT_KINDS` and `RESOURCE_KINDS`
 list the recommended values.
@@ -253,8 +265,8 @@ python -m dug_data_model.scaffold schema v2 --format markdown -o SCHEMA.md
 | `DugStudy` | `"study"` | A research study or dataset |
 | `DugSection` | `"section"` | A section or instrument within a study |
 | `DugResource` | `"resource"` | Something external with a URL and a description, usually the repository deposit (dataset) a study's files came from |
-| `DugDocument` | `"document"` | A textual file attached to a study (README, protocol, report, poster, ...) |
-| `DugDocumentSection` | `"document_section"` | A headed piece of text within a `DugDocument` |
+| `DugDocument` | `"document"` | A `DugResource` that is a single file (README, protocol, report, poster, ...); holds no text itself |
+| `DugContent` | `"content"` | A headed piece of a `DugDocument`'s text; the only element with text and a `can_display_content` flag |
 
 ## Development
 
