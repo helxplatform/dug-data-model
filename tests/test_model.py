@@ -114,6 +114,16 @@ class TestDugDocument:
         assert d.license == ""
         assert d.doi is None
 
+    def test_is_a_resource_that_is_a_single_file(self):
+        d = DugDocument(id="d1", name="README", description="", repository="zenodo",
+                        license="CC-BY-4.0", doi="10.1234/abc")
+        assert isinstance(d, DugResource)
+        assert d.type == DOCUMENT_TYPE
+        assert d.resource_type == "document"
+        assert "document" in RESOURCE_KINDS
+        assert d.repository == "zenodo"
+        assert d.document_list == []
+
     def test_recommended_kinds_are_not_enforced(self):
         assert "readme" in DOCUMENT_KINDS
         d = DugDocument(id="d1", name="Doc", description="", document_type="lab_notebook")
@@ -127,6 +137,7 @@ class TestDugDocument:
         )
         es = d.get_searchable_dict()
         assert es["element_type"] == "document"
+        assert es["resource_type"] == "document"
         assert es["file_name"] == "README.pdf"
         assert es["mime_type"] == "application/pdf"
         assert es["document_type"] == "readme"
@@ -295,9 +306,10 @@ class TestDugElementParsedList:
         assert types == {
             "study", "variable", "concept", "section", "document", "content", "resource",
         }
-        assert isinstance(elements[4], DugDocument)
+        assert type(elements[4]) is DugDocument
         assert isinstance(elements[5], DugContent)
-        assert isinstance(elements[6], DugResource)
+        # A document is a resource, but a "resource" dict must not load as a document.
+        assert type(elements[6]) is DugResource
 
     def test_wrong_type_raises(self):
         from pydantic import ValidationError
@@ -342,3 +354,4 @@ class TestDugElementParsedList:
             json.loads(json.dumps([e.model_dump() for e in original]))
         )
         assert restored == original
+        assert [type(e) for e in restored] == [DugResource, DugDocument, DugContent]

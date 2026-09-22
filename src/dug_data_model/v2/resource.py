@@ -13,9 +13,13 @@ RESOURCE_KINDS: tuple[str, ...] = (
     "software",
     "publication",
     "website",
+    "document",
     "other",
 )
-"""Recommended values for `DugResource.resource_type`."""
+"""Recommended values for `DugResource.resource_type`.
+
+'document' is what a `DugDocument` -- a resource that is a single file -- always has.
+"""
 
 
 class DugResource(DugElement):
@@ -24,7 +28,8 @@ class DugResource(DugElement):
     The main use is the repository deposit that a study's files came from, e.g. a Figshare
     article, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's
     title, `description` is its description, and `action` is its landing page. A resource
-    with a DOI is citable.
+    with a DOI is citable. A single file within a deposit is a `DugDocument`, a subclass of
+    this class.
     """
 
     type: Literal["resource"] = RESOURCE_TYPE
