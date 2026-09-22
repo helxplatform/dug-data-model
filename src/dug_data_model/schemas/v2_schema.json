@@ -105,6 +105,435 @@
       "title": "DugConcept",
       "type": "object"
     },
+    "DugContent": {
+      "description": "A piece of a `DugDocument`'s text: a heading and the body under it.\n\nContent is the only element that holds a document's text. A `DugDocument` describes and\nlinks to a file; if the file's text can be read, it is split into DugContent children, one\nper heading (or a single one when there are no headings). `name` is the heading and\n`description` is the text. `parents` holds the ID of the containing document, with\n`parent_type` set to 'document'.\n\nBecause content is the only element with anything to display, it is also the only one\nthat carries `can_display_content`. Producers set it from the document's licence; the\ndocument itself does not repeat it.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "type": {
+          "const": "content",
+          "default": "content",
+          "title": "Type",
+          "type": "string"
+        },
+        "programs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Programs",
+          "type": "array"
+        },
+        "action": {
+          "default": "",
+          "title": "Action",
+          "type": "string"
+        },
+        "parents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Parents",
+          "type": "array"
+        },
+        "parent_type": {
+          "default": "",
+          "title": "Parent Type",
+          "type": "string"
+        },
+        "concepts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DugConcept"
+          },
+          "title": "Concepts",
+          "type": "object"
+        },
+        "search_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Search Terms",
+          "type": "array"
+        },
+        "optional_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Optional Terms",
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "tags": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "position": {
+          "default": 0,
+          "description": "0-based order of this content within its document.",
+          "minimum": 0,
+          "title": "Position",
+          "type": "integer"
+        },
+        "level": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Heading depth (1 = top level) when the source format exposes it.",
+          "title": "Level"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "1-based page this content starts on, for paginated formats.",
+          "title": "Page"
+        },
+        "can_display_content": {
+          "default": false,
+          "description": "True only when the licence permits showing the text in a user interface. When False, the text is indexed but left out of API responses and users should be sent to `action` instead.",
+          "title": "Can Display Content",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ],
+      "title": "DugContent",
+      "type": "object"
+    },
+    "DugDocument": {
+      "description": "A `DugResource` that is a single file: a README, protocol, report, poster, ...\n\nA repository deposit is a resource; one file in it is a document. Being a resource, a\ndocument has a title (`name`), a summary (`description`), a landing or download URL\n(`action`), and the citable `repository`, `authors`, `doi` and `license` fields; it adds\nwhat only a file has: `file_name`, `mime_type` and `document_type`. Its `resource_type`\nis always 'document', and `document_list`, inherited from the resource, is normally empty.\n\nA document holds no text of its own. Whatever could be read out of the file lives in its\n`DugContent` children (`content_list`), so that every piece of text is searchable and\nannotatable in the same way, and so that whether text may be shown is decided once, on the\ncontent that would be shown. A file in a format nothing can read is still a document: it\nis listed and linked to, with no content.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "type": {
+          "const": "document",
+          "default": "document",
+          "title": "Type",
+          "type": "string"
+        },
+        "programs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Programs",
+          "type": "array"
+        },
+        "action": {
+          "default": "",
+          "title": "Action",
+          "type": "string"
+        },
+        "parents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Parents",
+          "type": "array"
+        },
+        "parent_type": {
+          "default": "",
+          "title": "Parent Type",
+          "type": "string"
+        },
+        "concepts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DugConcept"
+          },
+          "title": "Concepts",
+          "type": "object"
+        },
+        "search_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Search Terms",
+          "type": "array"
+        },
+        "optional_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Optional Terms",
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "tags": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "resource_type": {
+          "default": "document",
+          "description": "Always 'document' for a DugDocument.",
+          "title": "Resource Type",
+          "type": "string"
+        },
+        "repository": {
+          "default": "",
+          "description": "Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'.",
+          "title": "Repository",
+          "type": "string"
+        },
+        "authors": {
+          "description": "Author names in citation order.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Authors",
+          "type": "array"
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Bare DOI of this resource, without a resolver prefix.",
+          "title": "Doi"
+        },
+        "license": {
+          "default": "",
+          "description": "SPDX licence identifier; empty when unknown.",
+          "title": "License",
+          "type": "string"
+        },
+        "document_list": {
+          "description": "IDs of the DugDocuments that came from this resource.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Document List",
+          "type": "array"
+        },
+        "file_name": {
+          "default": "",
+          "description": "Original file name, e.g. 'README.pdf'.",
+          "title": "File Name",
+          "type": "string"
+        },
+        "mime_type": {
+          "default": "",
+          "description": "IANA media type, e.g. 'application/pdf'.",
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "document_type": {
+          "default": "",
+          "description": "Kind of document; recommended values are listed in DOCUMENT_KINDS.",
+          "title": "Document Type",
+          "type": "string"
+        },
+        "content_list": {
+          "description": "IDs of this document's DugContent, in reading order.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Content List",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ],
+      "title": "DugDocument",
+      "type": "object"
+    },
+    "DugResource": {
+      "description": "Something outside Dug that can be pointed to with a URL and a description.\n\nThe main use is the repository deposit that a study's files came from, e.g. a Figshare\narticle, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's\ntitle, `description` is its description, and `action` is its landing page. A resource\nwith a DOI is citable. A single file within a deposit is a `DugDocument`, a subclass of\nthis class.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "type": {
+          "const": "resource",
+          "default": "resource",
+          "title": "Type",
+          "type": "string"
+        },
+        "programs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Programs",
+          "type": "array"
+        },
+        "action": {
+          "default": "",
+          "title": "Action",
+          "type": "string"
+        },
+        "parents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Parents",
+          "type": "array"
+        },
+        "parent_type": {
+          "default": "",
+          "title": "Parent Type",
+          "type": "string"
+        },
+        "concepts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DugConcept"
+          },
+          "title": "Concepts",
+          "type": "object"
+        },
+        "search_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Search Terms",
+          "type": "array"
+        },
+        "optional_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Optional Terms",
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "tags": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "resource_type": {
+          "default": "dataset",
+          "description": "Kind of resource; recommended values are listed in RESOURCE_KINDS.",
+          "title": "Resource Type",
+          "type": "string"
+        },
+        "repository": {
+          "default": "",
+          "description": "Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'.",
+          "title": "Repository",
+          "type": "string"
+        },
+        "authors": {
+          "description": "Author names in citation order.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Authors",
+          "type": "array"
+        },
+        "doi": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Bare DOI of this resource, without a resolver prefix.",
+          "title": "Doi"
+        },
+        "license": {
+          "default": "",
+          "description": "SPDX licence identifier; empty when unknown.",
+          "title": "License",
+          "type": "string"
+        },
+        "document_list": {
+          "description": "IDs of the DugDocuments that came from this resource.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Document List",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ],
+      "title": "DugResource",
+      "type": "object"
+    },
     "DugSection": {
       "properties": {
         "id": {
@@ -307,6 +736,20 @@
           "title": "Section List",
           "type": "array"
         },
+        "document_list": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Document List",
+          "type": "array"
+        },
+        "resource_list": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Resource List",
+          "type": "array"
+        },
         "abstract": {
           "default": "",
           "title": "Abstract",
@@ -425,6 +868,9 @@
     "discriminator": {
       "mapping": {
         "concept": "#/$defs/DugConcept",
+        "content": "#/$defs/DugContent",
+        "document": "#/$defs/DugDocument",
+        "resource": "#/$defs/DugResource",
         "section": "#/$defs/DugSection",
         "study": "#/$defs/DugStudy",
         "variable": "#/$defs/DugVariable"
@@ -443,6 +889,15 @@
       },
       {
         "$ref": "#/$defs/DugSection"
+      },
+      {
+        "$ref": "#/$defs/DugDocument"
+      },
+      {
+        "$ref": "#/$defs/DugContent"
+      },
+      {
+        "$ref": "#/$defs/DugResource"
       }
     ]
   },
