@@ -4,7 +4,7 @@ from .variable import VARIABLE_TYPE, DugVariable
 from .study import STUDY_TYPE, DugStudy
 from .section import SECTION_TYPE, DugSection
 from .document import DOCUMENT_KINDS, DOCUMENT_TYPE, DugDocument
-from .document_section import DOCUMENT_SECTION_TYPE, DugDocumentSection
+from .content import CONTENT_TYPE, DugContent
 from .resource import RESOURCE_KINDS, RESOURCE_TYPE, DugResource
 from .types import (
     InputFile,
@@ -45,7 +45,7 @@ DugVariable.model_rebuild()
 DugStudy.model_rebuild()
 DugSection.model_rebuild()
 DugDocument.model_rebuild()
-DugDocumentSection.model_rebuild()
+DugContent.model_rebuild()
 DugResource.model_rebuild()
 
 __all__ = [
@@ -56,7 +56,7 @@ __all__ = [
     "DugStudy",
     "DugSection",
     "DugDocument",
-    "DugDocumentSection",
+    "DugContent",
     "DugResource",
     # Type definitions
     "Indexable",
@@ -71,7 +71,7 @@ __all__ = [
     "CONCEPT_TYPE",
     "SECTION_TYPE",
     "DOCUMENT_TYPE",
-    "DOCUMENT_SECTION_TYPE",
+    "CONTENT_TYPE",
     "DOCUMENT_KINDS",
     "RESOURCE_TYPE",
     "RESOURCE_KINDS",

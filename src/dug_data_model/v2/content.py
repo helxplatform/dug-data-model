@@ -6,33 +6,38 @@ from pydantic import Field, computed_field
 
 from .base import DugElement
 
-DOCUMENT_SECTION_TYPE = "document_section"
+CONTENT_TYPE = "content"
 
 
-class DugDocumentSection(DugElement):
-    """A headed section of a `DugDocument`.
+class DugContent(DugElement):
+    """A piece of a `DugDocument`'s text: a heading and the body under it.
 
-    `name` is the heading and `description` is the body text under it. `parents` holds the ID
-    of the containing document, with `parent_type` set to 'document'.
+    Content is the only element that holds a document's text. A `DugDocument` describes and
+    links to a file; if the file's text can be read, it is split into DugContent children, one
+    per heading (or a single one when there are no headings). `name` is the heading and
+    `description` is the text. `parents` holds the ID of the containing document, with
+    `parent_type` set to 'document'.
 
-    `can_display_content` should be copied from the parent document, so that a section can be
-    shown or withheld without looking its document up.
+    Because content is the only element with anything to display, it is also the only one
+    that carries `can_display_content`. Producers set it from the document's licence; the
+    document itself does not repeat it.
     """
 
-    type: Literal["document_section"] = DOCUMENT_SECTION_TYPE
+    type: Literal["content"] = CONTENT_TYPE
 
-    position: int = Field(0, ge=0, description="0-based order of this section within its document.")
+    position: int = Field(0, ge=0, description="0-based order of this content within its document.")
     level: int | None = Field(
         None, description="Heading depth (1 = top level) when the source format exposes it."
     )
     page: int | None = Field(
-        None, description="1-based page this section starts on, for paginated formats."
+        None, description="1-based page this content starts on, for paginated formats."
     )
     can_display_content: bool = Field(
         False,
         description=(
-            "Copy of the parent DugDocument's can_display_content. When False, the body text "
-            "is indexed but left out of API responses."
+            "True only when the licence permits showing the text in a user interface. When "
+            "False, the text is indexed but left out of API responses and users should be "
+            "sent to `action` instead."
         ),
     )
 

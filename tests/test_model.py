@@ -8,7 +8,7 @@ from dug_data_model.v2 import (
     DugStudy,
     DugSection,
     DugDocument,
-    DugDocumentSection,
+    DugContent,
     DugResource,
     DugElementParsedList,
     VARIABLE_TYPE,
@@ -16,7 +16,7 @@ from dug_data_model.v2 import (
     CONCEPT_TYPE,
     SECTION_TYPE,
     DOCUMENT_TYPE,
-    DOCUMENT_SECTION_TYPE,
+    CONTENT_TYPE,
     DOCUMENT_KINDS,
     RESOURCE_TYPE,
     RESOURCE_KINDS,
@@ -107,9 +107,10 @@ class TestDugDocument:
         d = DugDocument(id="d1", name="README", description="")
         assert d.type == DOCUMENT_TYPE
 
-    def test_content_is_not_displayable_by_default(self):
+    def test_holds_no_text_and_no_display_flag(self):
         d = DugDocument(id="d1", name="README", description="")
-        assert d.can_display_content is False
+        assert not hasattr(DugDocument, "content") and "content" not in DugDocument.model_fields
+        assert "can_display_content" not in DugDocument.model_fields
         assert d.license == ""
         assert d.doi is None
 
@@ -122,8 +123,7 @@ class TestDugDocument:
         d = DugDocument(
             id="d1", name="README", description="", file_name="README.pdf",
             mime_type="application/pdf", document_type="readme", authors=["A. Author"],
-            doi="10.1234/abc", license="CC-BY-4.0", can_display_content=True,
-            section_list=["d1/intro"],
+            doi="10.1234/abc", license="CC-BY-4.0", content_list=["d1/intro"],
         )
         es = d.get_searchable_dict()
         assert es["element_type"] == "document"
@@ -133,51 +133,51 @@ class TestDugDocument:
         assert es["authors"] == ["A. Author"]
         assert es["doi"] == "10.1234/abc"
         assert es["license"] == "CC-BY-4.0"
-        assert es["can_display_content"] is True
-        assert es["section_list"] == ["d1/intro"]
+        assert "can_display_content" not in es
+        assert es["content_list"] == ["d1/intro"]
 
 
-class TestDugDocumentSection:
+class TestDugContent:
     def test_default_type(self):
-        s = DugDocumentSection(id="d1/intro", name="Intro", description="Text")
-        assert s.type == DOCUMENT_SECTION_TYPE
+        s = DugContent(id="d1/intro", name="Intro", description="Text")
+        assert s.type == CONTENT_TYPE
 
     def test_ml_ready_desc_joins_heading_and_text(self):
-        s = DugDocumentSection(id="d1/intro", name="Methods", description="We did things.")
+        s = DugContent(id="d1/intro", name="Methods", description="We did things.")
         assert s.ml_ready_desc == "Methods: We did things."
 
     def test_ml_ready_desc_with_empty_body(self):
-        s = DugDocumentSection(id="d1/intro", name="Methods", description="")
+        s = DugContent(id="d1/intro", name="Methods", description="")
         assert s.ml_ready_desc == "Methods"
 
     def test_ml_ready_desc_with_empty_heading(self):
-        s = DugDocumentSection(id="d1/intro", name="", description="We did things.")
+        s = DugContent(id="d1/intro", name="", description="We did things.")
         assert s.ml_ready_desc == "We did things."
 
     def test_negative_position_rejected(self):
         from pydantic import ValidationError
         with pytest.raises(ValidationError):
-            DugDocumentSection(id="x", name="x", description="x", position=-1)
+            DugContent(id="x", name="x", description="x", position=-1)
 
     def test_get_searchable_dict(self):
-        s = DugDocumentSection(id="d1/intro", name="Intro", description="Text",
+        s = DugContent(id="d1/intro", name="Intro", description="Text",
                                position=2, level=1, page=3)
         es = s.get_searchable_dict()
-        assert es["element_type"] == "document_section"
+        assert es["element_type"] == "content"
         assert es["position"] == 2
         assert es["level"] == 1
         assert es["page"] == 3
         assert es["can_display_content"] is False
 
     def test_response_withholds_text_by_default(self):
-        s = DugDocumentSection(id="d1/intro", name="Intro", description="Text")
+        s = DugContent(id="d1/intro", name="Intro", description="Text")
         assert s.get_searchable_dict()["description"] == "Text"
         response = s.get_response_dict()
         assert response["description"] == ""
         assert response["name"] == "Intro"
 
     def test_response_includes_text_when_displayable(self):
-        s = DugDocumentSection(id="d1/intro", name="Intro", description="Text",
+        s = DugContent(id="d1/intro", name="Intro", description="Text",
                                can_display_content=True)
         assert s.get_response_dict()["description"] == "Text"
 
@@ -287,16 +287,16 @@ class TestDugElementParsedList:
             {"id": "c1", "name": "concept1", "description": "desc", "type": "concept"},
             {"id": "sec1", "name": "section1", "description": "desc", "type": "section"},
             {"id": "d1", "name": "document1", "description": "desc", "type": "document"},
-            {"id": "d1/s", "name": "heading", "description": "desc", "type": "document_section"},
+            {"id": "d1/s", "name": "heading", "description": "desc", "type": "content"},
             {"id": "r1", "name": "resource1", "description": "desc", "type": "resource"},
         ]
         elements = DugElementParsedList.validate_python(data)
         types = {e.type for e in elements}
         assert types == {
-            "study", "variable", "concept", "section", "document", "document_section", "resource",
+            "study", "variable", "concept", "section", "document", "content", "resource",
         }
         assert isinstance(elements[4], DugDocument)
-        assert isinstance(elements[5], DugDocumentSection)
+        assert isinstance(elements[5], DugContent)
         assert isinstance(elements[6], DugResource)
 
     def test_wrong_type_raises(self):
@@ -334,8 +334,8 @@ class TestDugElementParsedList:
             DugResource(id="r1", name="Dataset", description="desc", doi="10.1/x",
                         document_list=["d1"], parents=["s1"], parent_type="study"),
             DugDocument(id="d1", name="README", description="", mime_type="application/pdf",
-                        section_list=["d1/intro"], parents=["r1"], parent_type="resource"),
-            DugDocumentSection(id="d1/intro", name="Intro", description="Text", position=0,
+                        content_list=["d1/intro"], parents=["r1"], parent_type="resource"),
+            DugContent(id="d1/intro", name="Intro", description="Text", position=0,
                                page=1, parents=["d1"], parent_type="document"),
         ]
         restored = DugElementParsedList.validate_python(

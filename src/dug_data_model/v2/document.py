@@ -33,9 +33,10 @@ class DugDocument(DugElement):
     """A textual file attached to a study, such as a README, protocol, report or poster.
 
     `name` is the display title (the file name when no curated title is known), `description`
-    is a summary of the document, and `action` is the URL to link out to. The document's text
-    lives in its `DugDocumentSection` children rather than on the document itself, so that
-    every piece of text is searchable and annotatable in the same way.
+    is a summary of the document, and `action` is the URL to link out to. A document holds no
+    text of its own: whatever could be read out of the file lives in its `DugContent`
+    children, so that every piece of text is searchable and annotatable in the same way, and
+    so that whether text may be shown is decided once, on the content that would be shown.
     """
 
     type: Literal["document"] = DOCUMENT_TYPE
@@ -48,15 +49,8 @@ class DugDocument(DugElement):
     authors: list[str] = Field(default_factory=list, description="Author names in citation order.")
     doi: str | None = Field(None, description="Bare DOI of this document, without a resolver prefix.")
     license: str = Field("", description="SPDX licence identifier; empty when unknown.")
-    can_display_content: bool = Field(
-        False,
-        description=(
-            "True only when the licence permits showing section text in a user interface; "
-            "otherwise the text may be indexed but users should be sent to `action`."
-        ),
-    )
-    section_list: list[str] = Field(
-        default_factory=list, description="IDs of this document's DugDocumentSections, in reading order."
+    content_list: list[str] = Field(
+        default_factory=list, description="IDs of this document's DugContent, in reading order."
     )
 
     def get_searchable_dict(self) -> dict[str, Any]:
@@ -69,6 +63,5 @@ class DugDocument(DugElement):
             "authors": self.authors,
             "doi": self.doi,
             "license": self.license,
-            "can_display_content": self.can_display_content,
-            "section_list": self.section_list,
+            "content_list": self.content_list,
         }
