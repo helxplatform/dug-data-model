@@ -108,6 +108,7 @@ section = DugDocumentSection(
     name="General Methods",                  # the heading
     description="This repository contains ...",  # the text under it
     position=0, level=1,
+    can_display_content=readme.can_display_content,  # copied from the document
     parents=[readme.id], parent_type="document",
 )
 
@@ -121,6 +122,10 @@ An element has a single `parent_type`, so a document's parent is either its reso
 when it did not come from a known resource, its study. `DugStudy.document_list` lists every
 document in the study either way. `validate_references()` checks that all of these IDs
 resolve within a collection.
+
+Copy `can_display_content` from each document onto its sections. A section's
+`get_response_dict()` blanks its `description` unless `can_display_content` is True, so the
+text of a document that may not be displayed is still indexed but never returned to users.
 
 `document_type` and `resource_type` are free strings; `DOCUMENT_KINDS` and `RESOURCE_KINDS`
 list the recommended values.

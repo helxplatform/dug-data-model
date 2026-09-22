@@ -14,6 +14,9 @@ class DugDocumentSection(DugElement):
 
     `name` is the heading and `description` is the body text under it. `parents` holds the ID
     of the containing document, with `parent_type` set to 'document'.
+
+    `can_display_content` should be copied from the parent document, so that a section can be
+    shown or withheld without looking its document up.
     """
 
     type: Literal["document_section"] = DOCUMENT_SECTION_TYPE
@@ -24,6 +27,13 @@ class DugDocumentSection(DugElement):
     )
     page: int | None = Field(
         None, description="1-based page this section starts on, for paginated formats."
+    )
+    can_display_content: bool = Field(
+        False,
+        description=(
+            "Copy of the parent DugDocument's can_display_content. When False, the body text "
+            "is indexed but left out of API responses."
+        ),
     )
 
     @override
@@ -42,4 +52,12 @@ class DugDocumentSection(DugElement):
             "position": self.position,
             "level": self.level,
             "page": self.page,
+            "can_display_content": self.can_display_content,
         }
+
+    def get_response_dict(self) -> dict[str, Any]:
+        """Return the API response, with the body text blanked unless it may be displayed."""
+        response = super().get_response_dict()
+        if not self.can_display_content:
+            response["description"] = ""
+        return response

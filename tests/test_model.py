@@ -167,6 +167,19 @@ class TestDugDocumentSection:
         assert es["position"] == 2
         assert es["level"] == 1
         assert es["page"] == 3
+        assert es["can_display_content"] is False
+
+    def test_response_withholds_text_by_default(self):
+        s = DugDocumentSection(id="d1/intro", name="Intro", description="Text")
+        assert s.get_searchable_dict()["description"] == "Text"
+        response = s.get_response_dict()
+        assert response["description"] == ""
+        assert response["name"] == "Intro"
+
+    def test_response_includes_text_when_displayable(self):
+        s = DugDocumentSection(id="d1/intro", name="Intro", description="Text",
+                               can_display_content=True)
+        assert s.get_response_dict()["description"] == "Text"
 
 
 class TestDugResource:
