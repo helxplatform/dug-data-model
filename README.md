@@ -141,13 +141,13 @@ that starts from the study never has to climb. `build_parent_map()` and `get_chi
 Text and the right to show it live in the same place. A document has nothing to display, so it
 has no display flag; each `DugContent` says for itself whether its text may be shown, and its
 `get_response_dict()` blanks `description` unless `can_display_content` is True. The text is
-still indexed, so a search can find a document whose text may not be shown, and the UI can
-send the user to `action` instead. Note that Dug's v2 endpoints (`/variables`, `/studies`,
-...) return each hit's Elasticsearch `_source` as indexed by `get_searchable_dict()` and do
-not call `get_response_dict()`, so an endpoint that serves content has to apply the flag
-itself, or leave it to the UI: the flag is a statement of permission, not an enforcement. A producer sets the flag from the document's licence when
-it emits the content; there is no second copy to keep in step. A file whose format nothing can
-read is still a document, just one with no content.
+still indexed, so a search can find a document whose text may not be shown, and the UI can send
+the user to `action` instead. Note that Dug's v2 endpoints (`/variables`, `/studies`, ...)
+return each hit's Elasticsearch `_source` as indexed by `get_searchable_dict()` and do not call
+`get_response_dict()`, so an endpoint that serves content has to apply the flag itself, or
+leave it to the UI: the flag is a statement of permission, not an enforcement. A producer sets
+the flag from the document's licence when it emits the content; there is no second copy to keep
+in step. A file whose format nothing can read is still a document, just one with no content.
 
 `document_type` and `resource_type` are free strings; `DOCUMENT_KINDS` and `RESOURCE_KINDS`
 list the recommended values.
