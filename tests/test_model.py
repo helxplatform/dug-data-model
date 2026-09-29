@@ -170,6 +170,14 @@ class TestDugContent:
         with pytest.raises(ValidationError):
             DugContent(id="x", name="x", description="x", position=-1)
 
+    def test_level_and_page_are_one_based(self):
+        from pydantic import ValidationError
+        DugContent(id="x", name="x", description="x", level=1, page=1)
+        with pytest.raises(ValidationError):
+            DugContent(id="x", name="x", description="x", level=0)
+        with pytest.raises(ValidationError):
+            DugContent(id="x", name="x", description="x", page=0)
+
     def test_get_searchable_dict(self):
         s = DugContent(id="d1/intro", name="Intro", description="Text",
                                position=2, level=1, page=3)

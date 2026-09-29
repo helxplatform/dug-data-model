@@ -27,10 +27,10 @@ class DugContent(DugElement):
 
     position: int = Field(0, ge=0, description="0-based order of this content within its document.")
     level: int | None = Field(
-        None, description="Heading depth (1 = top level) when the source format exposes it."
+        None, ge=1, description="Heading depth (1 = top level) when the source format exposes it."
     )
     page: int | None = Field(
-        None, description="1-based page this content starts on, for paginated formats."
+        None, ge=1, description="1-based page this content starts on, for paginated formats."
     )
     can_display_content: bool = Field(
         False,

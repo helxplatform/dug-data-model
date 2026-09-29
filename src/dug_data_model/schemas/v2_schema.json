@@ -196,6 +196,7 @@
         "level": {
           "anyOf": [
             {
+              "minimum": 1,
               "type": "integer"
             },
             {
@@ -209,6 +210,7 @@
         "page": {
           "anyOf": [
             {
+              "minimum": 1,
               "type": "integer"
             },
             {
