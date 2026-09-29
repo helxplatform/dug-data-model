@@ -131,6 +131,13 @@ when it did not come from a known resource, its study. `DugStudy.document_list` 
 document in the study either way. `validate_references()` checks that all of these IDs
 resolve within a collection.
 
+Going the other way, from a piece of content up to its study, follows `parents` through the
+document and then the resource: three hops, or two when the document hangs off the study
+directly. That is deliberate. A content element records only its document, and a document
+only where it came from; the study lists its documents and resources directly, so a consumer
+that starts from the study never has to climb. `build_parent_map()` and `get_children()` in
+`dug_data_model.v2` walk the chain in either direction.
+
 Text and the right to show it live in the same place. A document has nothing to display, so it
 has no display flag; each `DugContent` says for itself whether its text may be shown, and its
 `get_response_dict()` blanks `description` unless `can_display_content` is True. The text is
