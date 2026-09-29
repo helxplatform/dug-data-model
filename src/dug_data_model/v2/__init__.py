@@ -5,7 +5,7 @@ from .study import STUDY_TYPE, DugStudy
 from .section import SECTION_TYPE, DugSection
 from .document import DOCUMENT_KINDS, DOCUMENT_TYPE, DugDocument
 from .content import CONTENT_TYPE, DugContent
-from .resource import RESOURCE_KINDS, RESOURCE_TYPE, DugResource
+from .resource import REPOSITORY_KINDS, RESOURCE_KINDS, RESOURCE_TYPE, DugResource
 from .licenses import DISPLAYABLE_LICENSES, can_display
 from .types import (
     InputFile,
@@ -77,6 +77,7 @@ __all__ = [
     "DOCUMENT_KINDS",
     "RESOURCE_TYPE",
     "RESOURCE_KINDS",
+    "REPOSITORY_KINDS",
     "DISPLAYABLE_LICENSES",
     # Licences
     "can_display",

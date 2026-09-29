@@ -104,7 +104,7 @@ is listed and linked to, with no content.
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
 | `resource_type` | `str` | No | `"document"` | Always 'document' for a DugDocument. |
-| `repository` | `str` | No | `""` | Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'. |
+| `repository` | `str` | No | `""` | Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
 | `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |
 | `license` | `str` | No | `""` | SPDX licence identifier; empty when unknown. |
@@ -140,7 +140,7 @@ this class.
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
 | `resource_type` | `str` | No | `"dataset"` | Kind of resource; recommended values are listed in RESOURCE_KINDS. |
-| `repository` | `str` | No | `""` | Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'. |
+| `repository` | `str` | No | `""` | Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
 | `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |
 | `license` | `str` | No | `""` | SPDX licence identifier; empty when unknown. |

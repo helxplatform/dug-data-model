@@ -20,6 +20,7 @@ from dug_data_model.v2 import (
     DOCUMENT_KINDS,
     RESOURCE_TYPE,
     RESOURCE_KINDS,
+    REPOSITORY_KINDS,
     DISPLAYABLE_LICENSES,
     can_display,
 )
@@ -212,6 +213,11 @@ class TestDugResource:
         r = DugResource(id="r1", name="Dataset", description="A dataset")
         assert r.resource_type == "dataset"
         assert "dataset" in RESOURCE_KINDS
+
+    def test_repository_slugs_are_recommended_not_enforced(self):
+        assert "zenodo" in REPOSITORY_KINDS
+        r = DugResource(id="r1", name="Data", description="", repository="lab-server")
+        assert r.repository == "lab-server"
 
     def test_get_searchable_dict(self):
         r = DugResource(

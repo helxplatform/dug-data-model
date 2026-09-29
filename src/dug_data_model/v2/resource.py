@@ -21,6 +21,24 @@ RESOURCE_KINDS: tuple[str, ...] = (
 'document' is what a `DugDocument` -- a resource that is a single file -- always has.
 """
 
+REPOSITORY_KINDS: tuple[str, ...] = (
+    "figshare",
+    "zenodo",
+    "dataverse",
+    "osf",
+    "openneuro",
+    "mendeley-data",
+    "github",
+    "sparc",
+    "pennsieve",
+)
+"""Recommended values for `DugResource.repository`: one lower-case slug per repository.
+
+A free string like `resource_type`, so a new repository does not need a model release, but
+producers that infer the repository from a URL or DOI prefix should map to these slugs so
+that a filter on `repository` finds every deposit from the same place.
+"""
+
 
 class DugResource(DugElement):
     """Something outside Dug that can be pointed to with a URL and a description.
@@ -38,7 +56,9 @@ class DugResource(DugElement):
         "dataset", description="Kind of resource; recommended values are listed in RESOURCE_KINDS."
     )
     repository: str = Field(
-        "", description="Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'."
+        "",
+        description="Slug of the repository hosting this resource; recommended values are "
+        "listed in REPOSITORY_KINDS.",
     )
     authors: list[str] = Field(default_factory=list, description="Author names in citation order.")
     doi: str = Field(

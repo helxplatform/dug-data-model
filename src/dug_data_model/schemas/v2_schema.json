@@ -325,7 +325,7 @@
         },
         "repository": {
           "default": "",
-          "description": "Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'.",
+          "description": "Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS.",
           "title": "Repository",
           "type": "string"
         },
@@ -481,7 +481,7 @@
         },
         "repository": {
           "default": "",
-          "description": "Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'.",
+          "description": "Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS.",
           "title": "Repository",
           "type": "string"
         },
