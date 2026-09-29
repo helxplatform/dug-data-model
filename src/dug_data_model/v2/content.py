@@ -19,8 +19,8 @@ class DugContent(DugElement):
     `parent_type` set to 'document'.
 
     Because content is the only element with anything to display, it is also the only one
-    that carries `can_display_content`. Producers set it from the document's licence; the
-    document itself does not repeat it.
+    that carries `can_display_content`. Producers set it from the document's licence with
+    `can_display()` (see `licenses.py`); the document itself does not repeat it.
     """
 
     type: Literal["content"] = CONTENT_TYPE
@@ -35,9 +35,10 @@ class DugContent(DugElement):
     can_display_content: bool = Field(
         False,
         description=(
-            "True only when the licence permits showing the text in a user interface. When "
-            "False, the text is indexed but left out of API responses and users should be "
-            "sent to `action` instead."
+            "True only when the licence permits showing the text in a user interface; "
+            "producers set it with can_display() from DISPLAYABLE_LICENSES. When False, the "
+            "text is indexed but should not be shown, and users should be sent to `action` "
+            "instead."
         ),
     )
 

@@ -6,6 +6,7 @@ from .section import SECTION_TYPE, DugSection
 from .document import DOCUMENT_KINDS, DOCUMENT_TYPE, DugDocument
 from .content import CONTENT_TYPE, DugContent
 from .resource import RESOURCE_KINDS, RESOURCE_TYPE, DugResource
+from .licenses import DISPLAYABLE_LICENSES, can_display
 from .types import (
     InputFile,
     Indexable,
@@ -75,6 +76,9 @@ __all__ = [
     "DOCUMENT_KINDS",
     "RESOURCE_TYPE",
     "RESOURCE_KINDS",
+    "DISPLAYABLE_LICENSES",
+    # Licences
+    "can_display",
     # Filtering and grouping
     "filter_by_type",
     "group_by_type",

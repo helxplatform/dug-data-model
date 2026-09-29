@@ -106,7 +106,7 @@
       "type": "object"
     },
     "DugContent": {
-      "description": "A piece of a `DugDocument`'s text: a heading and the body under it.\n\nContent is the only element that holds a document's text. A `DugDocument` describes and\nlinks to a file; if the file's text can be read, it is split into DugContent children, one\nper heading (or a single one when there are no headings). `name` is the heading and\n`description` is the text. `parents` holds the ID of the containing document, with\n`parent_type` set to 'document'.\n\nBecause content is the only element with anything to display, it is also the only one\nthat carries `can_display_content`. Producers set it from the document's licence; the\ndocument itself does not repeat it.",
+      "description": "A piece of a `DugDocument`'s text: a heading and the body under it.\n\nContent is the only element that holds a document's text. A `DugDocument` describes and\nlinks to a file; if the file's text can be read, it is split into DugContent children, one\nper heading (or a single one when there are no headings). `name` is the heading and\n`description` is the text. `parents` holds the ID of the containing document, with\n`parent_type` set to 'document'.\n\nBecause content is the only element with anything to display, it is also the only one\nthat carries `can_display_content`. Producers set it from the document's licence with\n`can_display()` (see `licenses.py`); the document itself does not repeat it.",
       "properties": {
         "id": {
           "title": "Id",
@@ -223,7 +223,7 @@
         },
         "can_display_content": {
           "default": false,
-          "description": "True only when the licence permits showing the text in a user interface. When False, the text is indexed but left out of API responses and users should be sent to `action` instead.",
+          "description": "True only when the licence permits showing the text in a user interface; producers set it with can_display() from DISPLAYABLE_LICENSES. When False, the text is indexed but should not be shown, and users should be sent to `action` instead.",
           "title": "Can Display Content",
           "type": "boolean"
         }

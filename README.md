@@ -82,7 +82,7 @@ reports, posters. Three element types describe them, one per level:
   with `can_display_content`.
 
 ```python
-from dug_data_model.v2 import DugContent, DugDocument, DugResource, DugStudy
+from dug_data_model.v2 import DugContent, DugDocument, DugResource, DugStudy, can_display
 
 dataset = DugResource(
     id="HDP1/resources/zenodo-1",
@@ -116,7 +116,7 @@ section = DugContent(
     name="General Methods",                  # the heading
     description="This repository contains ...",  # the text under it
     position=0, level=1,
-    can_display_content=True,                # the producer decides this from readme.license
+    can_display_content=can_display(readme.license),  # see DISPLAYABLE_LICENSES
     parents=[readme.id], parent_type="document",
 )
 
@@ -147,7 +147,9 @@ return each hit's Elasticsearch `_source` as indexed by `get_searchable_dict()` 
 `get_response_dict()`, so an endpoint that serves content has to apply the flag itself, or
 leave it to the UI: the flag is a statement of permission, not an enforcement. A producer sets
 the flag from the document's licence when it emits the content; there is no second copy to keep
-in step. A file whose format nothing can read is still a document, just one with no content.
+in step. A file whose format nothing can read is still a document, just one with no content. The licences that count are listed in
+`DISPLAYABLE_LICENSES`, and `can_display(license)` applies them, so that every producer sets the
+flag the same way; NonCommercial and NoDerivatives licences are left for a person to decide.
 
 `document_type` and `resource_type` are free strings; `DOCUMENT_KINDS` and `RESOURCE_KINDS`
 list the recommended values.

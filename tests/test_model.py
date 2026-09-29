@@ -20,6 +20,8 @@ from dug_data_model.v2 import (
     DOCUMENT_KINDS,
     RESOURCE_TYPE,
     RESOURCE_KINDS,
+    DISPLAYABLE_LICENSES,
+    can_display,
 )
 
 
@@ -363,3 +365,18 @@ class TestDugElementParsedList:
         )
         assert restored == original
         assert [type(e) for e in restored] == [DugResource, DugDocument, DugContent]
+
+
+class TestCanDisplay:
+    def test_permissive_licences_may_be_displayed(self):
+        for license in ("CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"):
+            assert license in DISPLAYABLE_LICENSES
+            assert can_display(license) is True
+
+    def test_restrictive_unknown_or_missing_licence_may_not(self):
+        for license in ("CC-BY-NC-4.0", "CC-BY-ND-4.0", "proprietary", ""):
+            assert can_display(license) is False
+
+    def test_content_flag_follows_the_helper(self):
+        c = DugContent(id="d/x", name="H", description="T", can_display_content=can_display("CC0-1.0"))
+        assert c.get_response_dict()["description"] == "T"
