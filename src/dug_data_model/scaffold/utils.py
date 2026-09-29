@@ -65,10 +65,27 @@ def dedupe_and_sort(items: list[str]) -> list[str]:
     return sorted(set(items))
 
 
+def compact_dump(element: DugElement) -> dict[str, Any]:
+    """Return *element* as a dict with default-valued fields left out.
+
+    For files that people read and review: fields still at the model's defaults are
+    omitted, as is the computed `ml_ready_desc`, which repeats the description. Loading
+    the result through `DugElementParsedList` restores every omitted field. `type` is put
+    back by hand because it has a default, so `exclude_defaults` would drop it, but it is
+    the discriminator that says which class to load. `id`, `type` and `name` come first so
+    the file scans top-down.
+    """
+    dumped = element.model_dump(mode="json", exclude_defaults=True, exclude={"ml_ready_desc"})
+    dumped["type"] = element.type
+    first = ("id", "type", "name")
+    return {k: dumped[k] for k in first} | {k: v for k, v in dumped.items() if k not in first}
+
+
 def serialize_elements(
     elements: Iterable[DugElement],
     path: str | Path,
     indent: int | None = 2,
+    compact: bool = False,
 ) -> None:
     """Serialize a collection of elements to a JSON file.
 
@@ -76,6 +93,8 @@ def serialize_elements(
         elements: An iterable of DugElement objects to serialize.
         path: The file path to write to.
         indent: JSON indentation level (default: 2). Use None for compact output.
+        compact: Write each element with `compact_dump()`, leaving out fields still at
+            their defaults, for a file that people will read and review.
 
     Example:
         from dug_data_model.scaffold import DugElement, serialize_elements
@@ -87,7 +106,7 @@ def serialize_elements(
         serialize_elements(elements, "output.json")
     """
     path = Path(path)
-    data = [elem.model_dump() for elem in elements]
+    data = [compact_dump(elem) if compact else elem.model_dump() for elem in elements]
     with path.open("w") as f:
         json.dump(data, f, indent=indent, default=complex_handler)
 

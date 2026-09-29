@@ -17,6 +17,7 @@ from .types import (
 )
 from .utils import (
     build_parent_map,
+    compact_dump,
     complex_handler,
     count_by_type,
     dedupe_and_sort,
@@ -92,6 +93,7 @@ __all__ = [
     # Batch operations
     "prepare_for_indexing",
     # Serialization
+    "compact_dump",
     "complex_handler",
     "dedupe_and_sort",
     "load_elements",
