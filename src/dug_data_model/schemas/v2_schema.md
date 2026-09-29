@@ -85,8 +85,10 @@ is always 'document', and `document_list`, inherited from the resource, is norma
 A document holds no text of its own. Whatever could be read out of the file lives in its
 `DugContent` children (`content_list`), so that every piece of text is searchable and
 annotatable in the same way, and so that whether text may be shown is decided once, on the
-content that would be shown. A file in a format nothing can read is still a document: it
-is listed and linked to, with no content.
+content that would be shown. A document whose text could not be read -- a scanned PDF, or
+a file the curator named that no parser handles -- is still a document: it is listed and
+linked to, with no content. Bulk data files (recordings, scans, spreadsheets of primary
+data) are not documents; a producer inventories them on the resource they came from.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|

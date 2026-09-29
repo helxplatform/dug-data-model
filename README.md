@@ -85,7 +85,7 @@ reports, posters. Three element types describe them, one per level:
 from dug_data_model.v2 import DugContent, DugDocument, DugResource, DugStudy, can_display
 
 dataset = DugResource(
-    id="HDP1/resources/zenodo-1",
+    id="HDP1/resources/zenodo-org-records-1",
     name="Pain behaviour in mice: data and methods",
     description="Behavioural data and analysis notes.",
     action="https://zenodo.org/records/1",   # landing page
@@ -115,6 +115,7 @@ section = DugContent(
     id="HDP1/assets/README.docx/general-methods",
     name="General Methods",                  # the heading
     description="This repository contains ...",  # the text under it
+    action=readme.action,                    # where to send a user who may not see the text
     position=0, level=1,
     can_display_content=can_display(readme.license),  # see DISPLAYABLE_LICENSES
     parents=[readme.id], parent_type="document",
