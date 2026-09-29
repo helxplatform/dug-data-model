@@ -155,6 +155,37 @@ flag the same way; NonCommercial and NoDerivatives licences are left for a perso
 `document_type` and `resource_type` are free strings; `DOCUMENT_KINDS` and `RESOURCE_KINDS`
 list the recommended values.
 
+#### Reference producer conventions
+
+The model leaves several things to the producer. These are the conventions of the reference
+producer,
+[heal-non-data-dictionaries](https://github.com/heal-data-stewards/heal-non-data-dictionaries),
+recorded so that a second producer, or a UI, does not have to reinvent or guess them. They are
+not schema: nothing here is validated.
+
+- **IDs.** A resource is `<study>/resources/<url-slug>` (the URL's host and path, lower-cased,
+  non-alphanumerics collapsed to `-`); a document is `<study>/assets/<path under assets/>`; a
+  content element is `<document>/<heading-slug>`, with `_2`, `_3` on repeated headings and
+  `section-N` (N = 1-based position) when a heading has nothing sluggable in it.
+- **`action`.** A resource links to its landing page. A document links to an explicit curated
+  URL, else `https://doi.org/<doi>` when it has its own DOI, else the deposit URL it was
+  downloaded from. Each content element copies its document's `action`.
+- **Licence.** A document takes its own curated licence, else its resource's, else a
+  study-level default; each content element's `can_display_content` is
+  `can_display(document.license)`.
+- **`metadata` keys.** On a resource: `files = {"count": N, "bytes": B, "by_extension":
+  {".nev": 13, ...}}`, an inventory of every file in the deposit including those that became no
+  document (`.nii.gz` keeps its double extension; files without one are `"(none)"`). On a
+  document: `page_count` for paginated formats; `embedded` (`title`, `author`, `creator`,
+  `created`, `modified`, as stored in the file, for provenance only, since they are usually an
+  OS account name or blank); `text_extraction` when a document has no content: `"none"` (no
+  text layer) or `"no_handler"` (a curated file no parser handles). On a study: `appl_id` (NIH
+  application id), `notes` (curator's notes), and anything else from the study's curated
+  metadata.
+- **Which files become documents.** Files a parser can read (Word, PDF, Markdown, plain text;
+  spreadsheets and CSV when asked for). A curated file no parser handles becomes a document
+  with no content. Everything else -- recordings, scans, images, primary data -- is counted in
+  its resource's `files` inventory and nothing more.
 ## Scaffold: Creating a New Model Version
 
 Use the scaffold CLI to generate a new data model version inside the package:
