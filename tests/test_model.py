@@ -112,7 +112,7 @@ class TestDugDocument:
         assert not hasattr(DugDocument, "content") and "content" not in DugDocument.model_fields
         assert "can_display_content" not in DugDocument.model_fields
         assert d.license == ""
-        assert d.doi is None
+        assert d.doi == ""
 
     def test_is_a_resource_that_is_a_single_file(self):
         d = DugDocument(id="d1", name="README", description="", repository="zenodo",

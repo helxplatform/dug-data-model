@@ -336,17 +336,10 @@
           "type": "array"
         },
         "doi": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Bare DOI of this resource, without a resolver prefix.",
-          "title": "Doi"
+          "default": "",
+          "description": "Bare DOI of this resource, without a resolver prefix; empty when unknown.",
+          "title": "Doi",
+          "type": "string"
         },
         "license": {
           "default": "",
@@ -499,17 +492,10 @@
           "type": "array"
         },
         "doi": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "description": "Bare DOI of this resource, without a resolver prefix.",
-          "title": "Doi"
+          "default": "",
+          "description": "Bare DOI of this resource, without a resolver prefix; empty when unknown.",
+          "title": "Doi",
+          "type": "string"
         },
         "license": {
           "default": "",

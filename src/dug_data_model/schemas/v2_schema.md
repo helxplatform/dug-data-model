@@ -106,7 +106,7 @@ is listed and linked to, with no content.
 | `resource_type` | `str` | No | `"document"` | Always 'document' for a DugDocument. |
 | `repository` | `str` | No | `""` | Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
-| `doi` | `str` | No | `None` | Bare DOI of this resource, without a resolver prefix. |
+| `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |
 | `license` | `str` | No | `""` | SPDX licence identifier; empty when unknown. |
 | `document_list` | `list[str]` | No | - | IDs of the DugDocuments that came from this resource. |
 | `file_name` | `str` | No | `""` | Original file name, e.g. 'README.pdf'. |
@@ -142,7 +142,7 @@ this class.
 | `resource_type` | `str` | No | `"dataset"` | Kind of resource; recommended values are listed in RESOURCE_KINDS. |
 | `repository` | `str` | No | `""` | Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
-| `doi` | `str` | No | `None` | Bare DOI of this resource, without a resolver prefix. |
+| `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |
 | `license` | `str` | No | `""` | SPDX licence identifier; empty when unknown. |
 | `document_list` | `list[str]` | No | - | IDs of the DugDocuments that came from this resource. |
 

@@ -41,7 +41,9 @@ class DugResource(DugElement):
         "", description="Repository hosting this resource, e.g. 'figshare', 'zenodo', 'dataverse'."
     )
     authors: list[str] = Field(default_factory=list, description="Author names in citation order.")
-    doi: str | None = Field(None, description="Bare DOI of this resource, without a resolver prefix.")
+    doi: str = Field(
+        "", description="Bare DOI of this resource, without a resolver prefix; empty when unknown."
+    )
     license: str = Field("", description="SPDX licence identifier; empty when unknown.")
     document_list: list[str] = Field(
         default_factory=list, description="IDs of the DugDocuments that came from this resource."
