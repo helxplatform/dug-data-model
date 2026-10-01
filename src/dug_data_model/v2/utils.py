@@ -74,8 +74,12 @@ def compact_dump(element: DugElement) -> dict[str, Any]:
     back by hand because it has a default, so `exclude_defaults` would drop it, but it is
     the discriminator that says which class to load. `id`, `type` and `name` come first so
     the file scans top-down.
+
+    This dumps in Python mode, like `serialize_elements()`'s default path, so that objects
+    in `Any` fields (such as identifier objects in `DugConcept.identifiers`) reach
+    `complex_handler()`. `mode="json"` would make pydantic raise on them instead.
     """
-    dumped = element.model_dump(mode="json", exclude_defaults=True, exclude={"ml_ready_desc"})
+    dumped = element.model_dump(exclude_defaults=True, exclude={"ml_ready_desc"})
     dumped["type"] = element.type
     first = ("id", "type", "name")
     return {k: dumped[k] for k in first} | {k: v for k, v in dumped.items() if k not in first}

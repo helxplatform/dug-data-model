@@ -1,5 +1,7 @@
 """Tests for dug_data_model utility functions."""
 
+import json
+
 import pytest
 from dug_data_model.v2 import (
     DugConcept,
@@ -212,3 +214,18 @@ class TestCompactDump:
         serialize_elements(elements, path, compact=True)
         assert '"ml_ready_desc"' not in path.read_text()
         assert load_elements(path, DugElementParsedList) == elements
+
+    def test_serialize_compact_passes_jsonable_objects_to_complex_handler(self, tmp_path):
+        # Identifier and answer objects in a concept's `Any` fields have jsonable() but are
+        # unknown to pydantic, so a JSON-mode dump would raise on them.
+        class Identifier:
+            def jsonable(self):
+                return {"id": "MONDO:1", "label": "thing"}
+
+        concept = DugConcept(id="c1", name="C", description="d",
+                             identifiers={"MONDO:1": Identifier()})
+        path = tmp_path / "out.json"
+        serialize_elements([concept], path, compact=True)
+        assert json.loads(path.read_text())[0]["identifiers"] == {
+            "MONDO:1": {"id": "MONDO:1", "label": "thing"}
+        }
