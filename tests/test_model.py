@@ -383,6 +383,11 @@ class TestCanDisplay:
         for license in ("CC-BY-NC-4.0", "CC-BY-ND-4.0", "proprietary", ""):
             assert can_display(license) is False
 
+    def test_matching_ignores_case_and_surrounding_whitespace(self):
+        for license in ("cc-by-4.0", "Cc0-1.0", " CC-BY-SA-4.0\n"):
+            assert can_display(license) is True
+        assert can_display("cc-by-nc-4.0") is False
+
     def test_content_flag_follows_the_helper(self):
         c = DugContent(id="d/x", name="H", description="T", can_display_content=can_display("CC0-1.0"))
         assert c.get_response_dict()["description"] == "T"

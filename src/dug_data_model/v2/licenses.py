@@ -15,11 +15,15 @@ as commercial use or a derivative is a question for a person, not a lookup table
 licence at all means the text may be indexed but not shown.
 """
 
+_DISPLAYABLE_CASEFOLDED = frozenset(lic.casefold() for lic in DISPLAYABLE_LICENSES)
+
 
 def can_display(license: str) -> bool:
     """Return True if text under *license* (an SPDX identifier) may be shown in a UI.
 
     An empty or unknown licence gives False: the text can still be indexed, but users
-    should be sent to the element's `action` to read it at the source.
+    should be sent to the element's `action` to read it at the source. Matching ignores
+    case and surrounding whitespace, since SPDX identifiers are case-insensitive and
+    licences copied from repository metadata are often written as `cc-by-4.0`.
     """
-    return license in DISPLAYABLE_LICENSES
+    return license.strip().casefold() in _DISPLAYABLE_CASEFOLDED
