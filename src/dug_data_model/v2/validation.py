@@ -7,7 +7,10 @@ including uniqueness checks.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from functools import cache
 from typing import TYPE_CHECKING
+
+from .utils import get_all_ids
 
 if TYPE_CHECKING:
     from .base import DugElement
@@ -62,6 +65,12 @@ def validate_unique_ids(elements: Iterable[DugElement]) -> None:
         raise DuplicateIdError(duplicates)
 
 
+@cache
+def _reference_fields(cls: type[DugElement]) -> tuple[str, ...]:
+    """Return the names of *cls*'s fields that hold IDs of other elements."""
+    return tuple(name for name in cls.model_fields if name == "parents" or name.endswith("_list"))
+
+
 def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str]]:
     """Find IDs that elements refer to but that are not in the collection.
 
@@ -76,12 +85,10 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
         missing. Empty dict if every reference resolves.
     """
     all_elements = list(elements)
-    known_ids = {elem.id for elem in all_elements}
+    known_ids = get_all_ids(all_elements)
     missing: dict[str, set[str]] = {}
     for elem in all_elements:
-        for field_name in type(elem).model_fields:
-            if field_name != "parents" and not field_name.endswith("_list"):
-                continue
+        for field_name in _reference_fields(type(elem)):
             for ref in getattr(elem, field_name):
                 if ref not in known_ids:
                     missing.setdefault(field_name, set()).add(ref)
