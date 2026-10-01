@@ -127,6 +127,11 @@ class TestDugDocument:
         assert d.repository == "zenodo"
         assert d.document_list == []
 
+    def test_resource_type_cannot_be_anything_but_document(self):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            DugDocument(id="d1", name="README", description="", resource_type="dataset")
+
     def test_recommended_kinds_are_not_enforced(self):
         assert "readme" in DOCUMENT_KINDS
         d = DugDocument(id="d1", name="Doc", description="", document_type="lab_notebook")

@@ -318,6 +318,7 @@
           "type": "array"
         },
         "resource_type": {
+          "const": "document",
           "default": "document",
           "description": "Always 'document' for a DugDocument.",
           "title": "Resource Type",

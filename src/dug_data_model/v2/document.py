@@ -49,7 +49,9 @@ class DugDocument(DugResource):
 
     type: Literal["document"] = DOCUMENT_TYPE
 
-    resource_type: str = Field("document", description="Always 'document' for a DugDocument.")
+    resource_type: Literal["document"] = Field(
+        "document", description="Always 'document' for a DugDocument."
+    )
     file_name: str = Field("", description="Original file name, e.g. 'README.pdf'.")
     mime_type: str = Field("", description="IANA media type, e.g. 'application/pdf'.")
     document_type: str = Field(

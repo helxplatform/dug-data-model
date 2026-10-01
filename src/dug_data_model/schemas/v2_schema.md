@@ -105,7 +105,7 @@ data) are not documents; a producer inventories them on the resource they came f
 | `optional_terms` | `list[str]` | No | - |  |
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
-| `resource_type` | `str` | No | `"document"` | Always 'document' for a DugDocument. |
+| `resource_type` | `"document"` | No | `"document"` | Always 'document' for a DugDocument. |
 | `repository` | `str` | No | `""` | Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
 | `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |
