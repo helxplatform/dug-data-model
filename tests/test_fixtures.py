@@ -1,7 +1,8 @@
 """A real producer output, loaded and checked end to end.
 
 tests/fixtures/heal_hdp00009.json is HEAL study HDP00009 as written by the reference producer,
-heal-data-stewards/heal-non-data-dictionaries (commit 234bf9e): one study, two Figshare deposits
+heal-data-stewards/heal-non-data-dictionaries: a copy of its examples/HDP00009/HDP00009.json
+(commit 8b52af1, on the model-conventions branch): one study, two Figshare deposits
 as resources, one PDF README in each as a document with a single content element, and a file
 inventory on each resource. The extracted text is CC-BY-4.0, from Min Gon Kim, Kai Yu, Bin He et
 al. and Kai Yu, Samantha Schmitt, Bin He et al. (Carnegie Mellon University). It is a frozen
