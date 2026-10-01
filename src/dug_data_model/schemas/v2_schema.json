@@ -394,7 +394,7 @@
       "type": "object"
     },
     "DugResource": {
-      "description": "Something outside Dug that can be pointed to with a URL and a description.\n\nThe main use is the repository deposit that a study's files came from, e.g. a Figshare\narticle, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's\ntitle, `description` is its description, and `action` is its landing page. A resource\nwith a DOI is citable. A single file within a deposit is a `DugDocument`, a subclass of\nthis class.",
+      "description": "Something outside Dug that can be pointed to with a URL and a description.\n\nThe main use is the repository deposit that a study's files came from, e.g. a Figshare\narticle, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's\ntitle, `description` is its description, and `action` is its landing page. A resource\nwith a DOI is citable. A single file within a deposit is a `DugDocument`, a subclass of\nthis class, so `isinstance(x, DugResource)` is also true of documents: to get deposits\nonly, filter on `type` (`filter_by_type(elements, RESOURCE_TYPE)`).",
       "properties": {
         "id": {
           "title": "Id",

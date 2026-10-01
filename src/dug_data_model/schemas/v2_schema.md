@@ -124,7 +124,8 @@ The main use is the repository deposit that a study's files came from, e.g. a Fi
 article, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's
 title, `description` is its description, and `action` is its landing page. A resource
 with a DOI is citable. A single file within a deposit is a `DugDocument`, a subclass of
-this class.
+this class, so `isinstance(x, DugResource)` is also true of documents: to get deposits
+only, filter on `type` (`filter_by_type(elements, RESOURCE_TYPE)`).
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
