@@ -7,7 +7,10 @@ including uniqueness checks.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from functools import cache
 from typing import TYPE_CHECKING
+
+from .utils import get_all_ids
 
 if TYPE_CHECKING:
     from .base import DugElement
@@ -62,3 +65,49 @@ def validate_unique_ids(elements: Iterable[DugElement]) -> None:
         raise DuplicateIdError(duplicates)
 
 
+@cache
+def _reference_fields(cls: type[DugElement]) -> tuple[str, ...]:
+    """Return the names of *cls*'s fields that hold IDs of other elements."""
+    return tuple(name for name in cls.model_fields if name == "parents" or name.endswith("_list"))
+
+
+def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str]]:
+    """Find IDs that elements refer to but that are not in the collection.
+
+    An element refers to others through `parents` and through any field whose name ends in
+    `_list` (e.g. `variable_list`, `section_list`, `document_list`, `content_list`).
+
+    Args:
+        elements: An iterable of DugElement objects.
+
+    Returns:
+        A dict mapping each referring field name to the set of IDs it refers to that are
+        missing. Empty dict if every reference resolves.
+    """
+    all_elements = list(elements)
+    known_ids = get_all_ids(all_elements)
+    missing: dict[str, set[str]] = {}
+    for elem in all_elements:
+        for field_name in _reference_fields(type(elem)):
+            for ref in getattr(elem, field_name):
+                if ref not in known_ids:
+                    missing.setdefault(field_name, set()).add(ref)
+    return missing
+
+
+def validate_references(elements: Iterable[DugElement]) -> None:
+    """Validate that every parent and `*_list` reference points at an element in the collection.
+
+    This is opt-in rather than part of loading, because a producer may legitimately split
+    related elements across several files.
+
+    Args:
+        elements: An iterable of DugElement objects.
+
+    Raises:
+        MissingReferenceError: If any referenced ID is not in the collection.
+    """
+    missing = find_missing_references(elements)
+    if missing:
+        all_missing = set().union(*missing.values())
+        raise MissingReferenceError(all_missing, reference_type="/".join(sorted(missing)))

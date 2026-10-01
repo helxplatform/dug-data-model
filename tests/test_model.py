@@ -1,17 +1,32 @@
 """Tests for dug_data_model.v2.model"""
 
 import pytest
+from pydantic import ValidationError
+
 from dug_data_model.v2 import (
     DugElement,
     DugConcept,
     DugVariable,
     DugStudy,
     DugSection,
+    DugDocument,
+    DugContent,
+    DugResource,
     DugElementParsedList,
+    load_elements,
+    serialize_elements,
     VARIABLE_TYPE,
     STUDY_TYPE,
     CONCEPT_TYPE,
     SECTION_TYPE,
+    DOCUMENT_TYPE,
+    CONTENT_TYPE,
+    DOCUMENT_KINDS,
+    RESOURCE_TYPE,
+    RESOURCE_KINDS,
+    REPOSITORY_KINDS,
+    DISPLAYABLE_LICENSES,
+    can_display,
 )
 
 
@@ -55,6 +70,13 @@ class TestDugStudy:
         assert "variable_list" in d
         assert "section_list" in d
 
+    def test_document_and_resource_lists(self):
+        s = DugStudy(id="s1", name="Study", description="A study",
+                     document_list=["d1"], resource_list=["r1"])
+        d = s.get_searchable_dict()
+        assert d["document_list"] == ["d1"]
+        assert d["resource_list"] == ["r1"]
+
 
 class TestDugConcept:
     def test_default_type(self):
@@ -85,6 +107,129 @@ class TestDugSection:
         d = s.get_searchable_dict()
         assert d["is_crf"] is True
         assert d["variable_list"] == ["v1", "v2"]
+
+
+class TestDugDocument:
+    def test_default_type(self):
+        d = DugDocument(id="d1", name="README", description="")
+        assert d.type == DOCUMENT_TYPE
+
+    def test_holds_no_text_and_no_display_flag(self):
+        assert "content" not in DugDocument.model_fields
+        assert "can_display_content" not in DugDocument.model_fields
+
+    def test_is_a_resource_that_is_a_single_file(self):
+        d = DugDocument(id="d1", name="README", description="", repository="zenodo",
+                        license="CC-BY-4.0", doi="10.1234/abc")
+        assert isinstance(d, DugResource)
+        assert d.resource_type == "document"
+        assert "document" in RESOURCE_KINDS
+        assert d.repository == "zenodo"
+        assert d.document_list == []
+
+    def test_resource_type_cannot_be_anything_but_document(self):
+        with pytest.raises(ValidationError):
+            DugDocument(id="d1", name="README", description="", resource_type="dataset")
+
+    def test_recommended_kinds_are_not_enforced(self):
+        assert "readme" in DOCUMENT_KINDS
+        d = DugDocument(id="d1", name="Doc", description="", document_type="lab_notebook")
+        assert d.document_type == "lab_notebook"
+
+    def test_get_searchable_dict(self):
+        d = DugDocument(
+            id="d1", name="README", description="", file_name="README.pdf",
+            mime_type="application/pdf", document_type="readme", authors=["A. Author"],
+            doi="10.1234/abc", license="CC-BY-4.0", content_list=["d1/intro"],
+        )
+        es = d.get_searchable_dict()
+        assert es["element_type"] == "document"
+        assert es["resource_type"] == "document"
+        assert es["file_name"] == "README.pdf"
+        assert es["mime_type"] == "application/pdf"
+        assert es["document_type"] == "readme"
+        assert es["authors"] == ["A. Author"]
+        assert es["doi"] == "10.1234/abc"
+        assert es["license"] == "CC-BY-4.0"
+        assert "can_display_content" not in es
+        assert es["content_list"] == ["d1/intro"]
+
+
+class TestDugContent:
+    def test_default_type(self):
+        c = DugContent(id="d1/intro", name="Intro", description="Text")
+        assert c.type == CONTENT_TYPE
+
+    @pytest.mark.parametrize("name, description, expected", [
+        ("Methods", "We did things.", "Methods: We did things."),
+        ("Methods", "", "Methods"),
+        ("", "We did things.", "We did things."),
+    ])
+    def test_ml_ready_desc_joins_heading_and_text(self, name, description, expected):
+        c = DugContent(id="d1/intro", name=name, description=description)
+        assert c.ml_ready_desc == expected
+
+    def test_level_and_page_are_one_based(self):
+        DugContent(id="x", name="x", description="x", level=1, page=1)
+
+    @pytest.mark.parametrize("bad", [{"position": -1}, {"level": 0}, {"page": 0}])
+    def test_out_of_range_position_level_or_page_rejected(self, bad):
+        with pytest.raises(ValidationError):
+            DugContent(id="x", name="x", description="x", **bad)
+
+    def test_get_searchable_dict(self):
+        c = DugContent(id="d1/intro", name="Intro", description="Text",
+                       position=2, level=1, page=3)
+        es = c.get_searchable_dict()
+        assert es["element_type"] == "content"
+        assert es["position"] == 2
+        assert es["level"] == 1
+        assert es["page"] == 3
+        assert es["can_display_content"] is False
+
+    def test_response_withholds_text_by_default(self):
+        c = DugContent(id="d1/intro", name="Intro", description="Text")
+        assert c.get_searchable_dict()["description"] == "Text"
+        response = c.get_response_dict()
+        assert response["description"] == ""
+        assert response["name"] == "Intro"
+
+    def test_response_includes_text_when_displayable(self):
+        c = DugContent(id="d1/intro", name="Intro", description="Text",
+                       can_display_content=True)
+        assert c.get_response_dict()["description"] == "Text"
+
+
+class TestDugResource:
+    def test_default_type(self):
+        r = DugResource(id="r1", name="Dataset", description="A dataset")
+        assert r.type == RESOURCE_TYPE
+
+    def test_is_a_dataset_by_default(self):
+        r = DugResource(id="r1", name="Dataset", description="A dataset")
+        assert r.resource_type == "dataset"
+        assert "dataset" in RESOURCE_KINDS
+
+    def test_repository_slugs_are_recommended_not_enforced(self):
+        assert "zenodo" in REPOSITORY_KINDS
+        r = DugResource(id="r1", name="Data", description="", repository="lab-server")
+        assert r.repository == "lab-server"
+
+    def test_get_searchable_dict(self):
+        r = DugResource(
+            id="r1", name="Dataset", description="A dataset", repository="zenodo",
+            authors=["A. Author"], doi="10.5281/zenodo.1", license="CC0-1.0",
+            document_list=["d1"], action="https://zenodo.org/records/1",
+        )
+        es = r.get_searchable_dict()
+        assert es["element_type"] == "resource"
+        assert es["resource_type"] == "dataset"
+        assert es["repository"] == "zenodo"
+        assert es["authors"] == ["A. Author"]
+        assert es["doi"] == "10.5281/zenodo.1"
+        assert es["license"] == "CC0-1.0"
+        assert es["document_list"] == ["d1"]
+        assert es["action"] == "https://zenodo.org/records/1"
 
 
 # ---------------------------------------------------------------------------
@@ -164,13 +309,21 @@ class TestDugElementParsedList:
             {"id": "v1", "name": "var1", "description": "desc", "type": "variable"},
             {"id": "c1", "name": "concept1", "description": "desc", "type": "concept"},
             {"id": "sec1", "name": "section1", "description": "desc", "type": "section"},
+            {"id": "d1", "name": "document1", "description": "desc", "type": "document"},
+            {"id": "d1/s", "name": "heading", "description": "desc", "type": "content"},
+            {"id": "r1", "name": "resource1", "description": "desc", "type": "resource"},
         ]
         elements = DugElementParsedList.validate_python(data)
         types = {e.type for e in elements}
-        assert types == {"study", "variable", "concept", "section"}
+        assert types == {
+            "study", "variable", "concept", "section", "document", "content", "resource",
+        }
+        assert type(elements[4]) is DugDocument
+        assert isinstance(elements[5], DugContent)
+        # A document is a resource, but a "resource" dict must not load as a document.
+        assert type(elements[6]) is DugResource
 
     def test_wrong_type_raises(self):
-        from pydantic import ValidationError
         data = [{"id": "x", "name": "x", "description": "x", "type": "unknown"}]
         with pytest.raises(ValidationError):
             DugElementParsedList.validate_python(data)
@@ -197,3 +350,37 @@ class TestDugElementParsedList:
         assert restored[0].data_type == "integer"
         assert restored[1].id == "s1"
         assert restored[1].abstract == "text"
+
+    def test_roundtrip_document_hierarchy(self, tmp_path):
+        original = [
+            DugResource(id="r1", name="Dataset", description="desc", doi="10.1/x",
+                        document_list=["d1"], parents=["s1"], parent_type="study"),
+            DugDocument(id="d1", name="README", description="", mime_type="application/pdf",
+                        content_list=["d1/intro"], parents=["r1"], parent_type="resource"),
+            DugContent(id="d1/intro", name="Intro", description="Text", position=0,
+                       page=1, parents=["d1"], parent_type="document"),
+        ]
+        path = tmp_path / "out.json"
+        serialize_elements(original, path)
+        restored = load_elements(path, DugElementParsedList)
+        assert restored == original
+        assert [type(e) for e in restored] == [DugResource, DugDocument, DugContent]
+
+
+class TestCanDisplay:
+    def test_listed_licences_are_spdx_identifiers(self):
+        assert {"CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"} <= DISPLAYABLE_LICENSES
+
+    @pytest.mark.parametrize("license", [
+        "CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0",
+        # Matching ignores case and surrounding whitespace.
+        "cc-by-4.0", "Cc0-1.0", " CC-BY-SA-4.0\n",
+    ])
+    def test_permissive_licences_may_be_displayed(self, license):
+        assert can_display(license) is True
+
+    @pytest.mark.parametrize("license", [
+        "CC-BY-NC-4.0", "CC-BY-ND-4.0", "cc-by-nc-4.0", "proprietary", "",
+    ])
+    def test_restrictive_unknown_or_missing_licence_may_not(self, license):
+        assert can_display(license) is False

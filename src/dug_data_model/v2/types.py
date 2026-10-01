@@ -10,10 +10,15 @@ from .concept import DugConcept
 from .variable import DugVariable
 from .study import DugStudy
 from .section import DugSection
+from .document import DugDocument
+from .content import DugContent
+from .resource import DugResource
 
 InputFile = str | Path
 
-Indexable = DugConcept | DugVariable | DugStudy | DugSection
+Indexable = (
+    DugConcept | DugVariable | DugStudy | DugSection | DugDocument | DugContent | DugResource
+)
 Parser = Callable[[Any], Iterable[Indexable]]
 FileParser = Callable[[InputFile], Iterable[Indexable]]
 

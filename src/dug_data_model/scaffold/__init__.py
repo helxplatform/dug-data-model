@@ -92,6 +92,7 @@ from .concept import CONCEPT_TYPE, DugConcept
 from .types import InputFile
 from .utils import (
     build_parent_map,
+    compact_dump,
     complex_handler,
     count_by_type,
     dedupe_and_sort,
@@ -109,6 +110,8 @@ from .validation import (
     DuplicateIdError,
     MissingReferenceError,
     find_duplicate_ids,
+    find_missing_references,
+    validate_references,
     validate_unique_ids,
 )
 
@@ -137,6 +140,7 @@ __all__ = [
     # Batch operations
     "prepare_for_indexing",
     # Serialization
+    "compact_dump",
     "complex_handler",
     "dedupe_and_sort",
     "load_elements",
@@ -145,5 +149,7 @@ __all__ = [
     "DuplicateIdError",
     "MissingReferenceError",
     "find_duplicate_ids",
+    "find_missing_references",
+    "validate_references",
     "validate_unique_ids",
 ]
