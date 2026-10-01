@@ -293,6 +293,14 @@ python -m dug_data_model.scaffold schema v2 -o schema.json
 python -m dug_data_model.scaffold schema v2 --format markdown -o SCHEMA.md
 ```
 
+Copies are also committed in `src/dug_data_model/schemas/`, and `tests/test_schemas.py` fails
+when they no longer match the models. After changing a model, regenerate them:
+
+```bash
+python -m dug_data_model.scaffold schema v2 -o src/dug_data_model/schemas/v2_schema.json
+python -m dug_data_model.scaffold schema v2 --format markdown -o src/dug_data_model/schemas/v2_schema.md
+```
+
 ## Data Model Reference
 
 ### Core classes
