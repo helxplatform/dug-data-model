@@ -14,13 +14,16 @@ from pathlib import Path
 
 import pytest
 from dug_data_model.v2 import (
-    DugContent,
+    CONTENT_TYPE,
+    DOCUMENT_TYPE,
+    RESOURCE_TYPE,
     DugDocument,
     DugElementParsedList,
     DugResource,
     DugStudy,
     compact_dump,
     count_by_type,
+    filter_by_type,
     get_element_by_id,
     validate_references,
     validate_unique_ids,
@@ -50,7 +53,7 @@ class TestRealOutput:
 
     def test_parent_chain_is_content_document_resource_study(self, elements):
         study = elements[0]
-        for content in (e for e in elements if isinstance(e, DugContent)):
+        for content in filter_by_type(elements, CONTENT_TYPE):
             document = get_element_by_id(elements, content.parents[0])
             assert isinstance(document, DugDocument) and content.parent_type == "document"
             resource = get_element_by_id(elements, document.parents[0])
@@ -61,14 +64,14 @@ class TestRealOutput:
             assert document.id in study.document_list
 
     def test_content_carries_its_documents_action_and_display_flag(self, elements):
-        for content in (e for e in elements if isinstance(e, DugContent)):
+        for content in filter_by_type(elements, CONTENT_TYPE):
             document = get_element_by_id(elements, content.parents[0])
             assert content.action == document.action
             assert document.license == "CC-BY-4.0"
             assert content.can_display_content is True
 
     def test_documents_hold_no_text_and_inherit_their_resources_fields(self, elements):
-        for document in (e for e in elements if isinstance(e, DugDocument)):
+        for document in filter_by_type(elements, DOCUMENT_TYPE):
             resource = get_element_by_id(elements, document.parents[0])
             assert document.description == ""
             assert document.resource_type == "document"
@@ -77,7 +80,7 @@ class TestRealOutput:
             assert document.metadata["page_count"] >= 1
 
     def test_resources_inventory_every_file_in_the_deposit(self, elements):
-        inventories = [e.metadata["files"] for e in elements if type(e) is DugResource]
+        inventories = [e.metadata["files"] for e in filter_by_type(elements, RESOURCE_TYPE)]
         assert all(set(inv) == {"count", "bytes", "by_extension"} for inv in inventories)
         assert sum(inv["by_extension"].get(".pdf", 0) for inv in inventories) == 2
         assert any(".nev" in inv["by_extension"] for inv in inventories)

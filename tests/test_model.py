@@ -1,6 +1,8 @@
 """Tests for dug_data_model.v2.model"""
 
 import pytest
+from pydantic import ValidationError
+
 from dug_data_model.v2 import (
     DugElement,
     DugConcept,
@@ -11,6 +13,8 @@ from dug_data_model.v2 import (
     DugContent,
     DugResource,
     DugElementParsedList,
+    load_elements,
+    serialize_elements,
     VARIABLE_TYPE,
     STUDY_TYPE,
     CONCEPT_TYPE,
@@ -111,24 +115,19 @@ class TestDugDocument:
         assert d.type == DOCUMENT_TYPE
 
     def test_holds_no_text_and_no_display_flag(self):
-        d = DugDocument(id="d1", name="README", description="")
-        assert not hasattr(DugDocument, "content") and "content" not in DugDocument.model_fields
+        assert "content" not in DugDocument.model_fields
         assert "can_display_content" not in DugDocument.model_fields
-        assert d.license == ""
-        assert d.doi == ""
 
     def test_is_a_resource_that_is_a_single_file(self):
         d = DugDocument(id="d1", name="README", description="", repository="zenodo",
                         license="CC-BY-4.0", doi="10.1234/abc")
         assert isinstance(d, DugResource)
-        assert d.type == DOCUMENT_TYPE
         assert d.resource_type == "document"
         assert "document" in RESOURCE_KINDS
         assert d.repository == "zenodo"
         assert d.document_list == []
 
     def test_resource_type_cannot_be_anything_but_document(self):
-        from pydantic import ValidationError
         with pytest.raises(ValidationError):
             DugDocument(id="d1", name="README", description="", resource_type="dataset")
 
@@ -158,38 +157,30 @@ class TestDugDocument:
 
 class TestDugContent:
     def test_default_type(self):
-        s = DugContent(id="d1/intro", name="Intro", description="Text")
-        assert s.type == CONTENT_TYPE
+        c = DugContent(id="d1/intro", name="Intro", description="Text")
+        assert c.type == CONTENT_TYPE
 
-    def test_ml_ready_desc_joins_heading_and_text(self):
-        s = DugContent(id="d1/intro", name="Methods", description="We did things.")
-        assert s.ml_ready_desc == "Methods: We did things."
-
-    def test_ml_ready_desc_with_empty_body(self):
-        s = DugContent(id="d1/intro", name="Methods", description="")
-        assert s.ml_ready_desc == "Methods"
-
-    def test_ml_ready_desc_with_empty_heading(self):
-        s = DugContent(id="d1/intro", name="", description="We did things.")
-        assert s.ml_ready_desc == "We did things."
-
-    def test_negative_position_rejected(self):
-        from pydantic import ValidationError
-        with pytest.raises(ValidationError):
-            DugContent(id="x", name="x", description="x", position=-1)
+    @pytest.mark.parametrize("name, description, expected", [
+        ("Methods", "We did things.", "Methods: We did things."),
+        ("Methods", "", "Methods"),
+        ("", "We did things.", "We did things."),
+    ])
+    def test_ml_ready_desc_joins_heading_and_text(self, name, description, expected):
+        c = DugContent(id="d1/intro", name=name, description=description)
+        assert c.ml_ready_desc == expected
 
     def test_level_and_page_are_one_based(self):
-        from pydantic import ValidationError
         DugContent(id="x", name="x", description="x", level=1, page=1)
+
+    @pytest.mark.parametrize("bad", [{"position": -1}, {"level": 0}, {"page": 0}])
+    def test_out_of_range_position_level_or_page_rejected(self, bad):
         with pytest.raises(ValidationError):
-            DugContent(id="x", name="x", description="x", level=0)
-        with pytest.raises(ValidationError):
-            DugContent(id="x", name="x", description="x", page=0)
+            DugContent(id="x", name="x", description="x", **bad)
 
     def test_get_searchable_dict(self):
-        s = DugContent(id="d1/intro", name="Intro", description="Text",
-                               position=2, level=1, page=3)
-        es = s.get_searchable_dict()
+        c = DugContent(id="d1/intro", name="Intro", description="Text",
+                       position=2, level=1, page=3)
+        es = c.get_searchable_dict()
         assert es["element_type"] == "content"
         assert es["position"] == 2
         assert es["level"] == 1
@@ -197,16 +188,16 @@ class TestDugContent:
         assert es["can_display_content"] is False
 
     def test_response_withholds_text_by_default(self):
-        s = DugContent(id="d1/intro", name="Intro", description="Text")
-        assert s.get_searchable_dict()["description"] == "Text"
-        response = s.get_response_dict()
+        c = DugContent(id="d1/intro", name="Intro", description="Text")
+        assert c.get_searchable_dict()["description"] == "Text"
+        response = c.get_response_dict()
         assert response["description"] == ""
         assert response["name"] == "Intro"
 
     def test_response_includes_text_when_displayable(self):
-        s = DugContent(id="d1/intro", name="Intro", description="Text",
-                               can_display_content=True)
-        assert s.get_response_dict()["description"] == "Text"
+        c = DugContent(id="d1/intro", name="Intro", description="Text",
+                       can_display_content=True)
+        assert c.get_response_dict()["description"] == "Text"
 
 
 class TestDugResource:
@@ -333,7 +324,6 @@ class TestDugElementParsedList:
         assert type(elements[6]) is DugResource
 
     def test_wrong_type_raises(self):
-        from pydantic import ValidationError
         data = [{"id": "x", "name": "x", "description": "x", "type": "unknown"}]
         with pytest.raises(ValidationError):
             DugElementParsedList.validate_python(data)
@@ -361,38 +351,36 @@ class TestDugElementParsedList:
         assert restored[1].id == "s1"
         assert restored[1].abstract == "text"
 
-    def test_roundtrip_document_hierarchy(self):
-        import json
+    def test_roundtrip_document_hierarchy(self, tmp_path):
         original = [
             DugResource(id="r1", name="Dataset", description="desc", doi="10.1/x",
                         document_list=["d1"], parents=["s1"], parent_type="study"),
             DugDocument(id="d1", name="README", description="", mime_type="application/pdf",
                         content_list=["d1/intro"], parents=["r1"], parent_type="resource"),
             DugContent(id="d1/intro", name="Intro", description="Text", position=0,
-                               page=1, parents=["d1"], parent_type="document"),
+                       page=1, parents=["d1"], parent_type="document"),
         ]
-        restored = DugElementParsedList.validate_python(
-            json.loads(json.dumps([e.model_dump() for e in original]))
-        )
+        path = tmp_path / "out.json"
+        serialize_elements(original, path)
+        restored = load_elements(path, DugElementParsedList)
         assert restored == original
         assert [type(e) for e in restored] == [DugResource, DugDocument, DugContent]
 
 
 class TestCanDisplay:
-    def test_permissive_licences_may_be_displayed(self):
-        for license in ("CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"):
-            assert license in DISPLAYABLE_LICENSES
-            assert can_display(license) is True
+    def test_listed_licences_are_spdx_identifiers(self):
+        assert {"CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"} <= DISPLAYABLE_LICENSES
 
-    def test_restrictive_unknown_or_missing_licence_may_not(self):
-        for license in ("CC-BY-NC-4.0", "CC-BY-ND-4.0", "proprietary", ""):
-            assert can_display(license) is False
+    @pytest.mark.parametrize("license", [
+        "CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0",
+        # Matching ignores case and surrounding whitespace.
+        "cc-by-4.0", "Cc0-1.0", " CC-BY-SA-4.0\n",
+    ])
+    def test_permissive_licences_may_be_displayed(self, license):
+        assert can_display(license) is True
 
-    def test_matching_ignores_case_and_surrounding_whitespace(self):
-        for license in ("cc-by-4.0", "Cc0-1.0", " CC-BY-SA-4.0\n"):
-            assert can_display(license) is True
-        assert can_display("cc-by-nc-4.0") is False
-
-    def test_content_flag_follows_the_helper(self):
-        c = DugContent(id="d/x", name="H", description="T", can_display_content=can_display("CC0-1.0"))
-        assert c.get_response_dict()["description"] == "T"
+    @pytest.mark.parametrize("license", [
+        "CC-BY-NC-4.0", "CC-BY-ND-4.0", "cc-by-nc-4.0", "proprietary", "",
+    ])
+    def test_restrictive_unknown_or_missing_licence_may_not(self, license):
+        assert can_display(license) is False

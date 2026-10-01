@@ -90,7 +90,7 @@ class TestReferences:
         assert find_missing_references(elements) == {"parents": {"s1"}}
 
     def test_missing_list_member(self):
-        elements = _document_tree()[:2]  # drop the section
+        elements = _document_tree()[:2]  # drop the content
         assert find_missing_references(elements) == {"content_list": {"d1/a"}}
 
     def test_validate_raises_with_all_missing_ids(self):
