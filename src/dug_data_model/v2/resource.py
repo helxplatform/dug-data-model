@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, field_validator
 
+from .base import References
 from .citable import DugCitable
 
 RESOURCE_TYPE = "resource"
@@ -58,7 +59,7 @@ class DugResource(DugCitable):
     resource_type: str = Field(
         "dataset", description="Kind of resource; recommended values are listed in RESOURCE_KINDS."
     )
-    document_list: list[str] = Field(
+    document_list: Annotated[list[str], References("document")] = Field(
         default_factory=list, description="IDs of the DugDocuments that came from this resource."
     )
 

@@ -1,13 +1,19 @@
 """Tests for dug_data_model validation functions."""
 
+from typing import Annotated, Literal
+
 import pytest
+from pydantic import Field
+
 from dug_data_model.v2 import (
+    DugElement,
     DugDocument,
     DugContent,
     DugStudy,
     DugVariable,
     DuplicateIdError,
     MissingReferenceError,
+    References,
     find_duplicate_ids,
     find_missing_references,
     validate_references,
@@ -102,3 +108,23 @@ class TestReferences:
 
     def test_accepts_a_generator(self):
         assert find_missing_references(e for e in _document_tree()) == {}
+
+
+class _Tagged(DugElement):
+    """An element with `_list` fields that are not references, and one that is."""
+
+    type: Literal["tagged"] = "tagged"
+    keyword_list: list[str] = Field(default_factory=list)
+    file_list: list[dict[str, str]] = Field(default_factory=list)
+    see_also: Annotated[list[str], References()] = Field(default_factory=list)
+
+
+class TestReferenceFieldsAreMarked:
+    def test_unmarked_list_fields_are_not_references(self):
+        elem = _Tagged(id="t1", name="T", description="", keyword_list=["pain"],
+                       file_list=[{"name": "README.pdf"}])
+        assert find_missing_references([elem]) == {}
+
+    def test_a_marked_field_is_a_reference_whatever_its_name(self):
+        elem = _Tagged(id="t1", name="T", description="", see_also=["t2"])
+        assert find_missing_references([elem]) == {"see_also": {"t2"}}

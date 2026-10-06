@@ -36,7 +36,7 @@ After generation, you need to:
 1. **Add element subclasses** (e.g., in a new ``variable.py``)::
 
        from typing import Literal, Any
-       from .base import DugElement
+       from .base import DugElement, References
 
        class DugVariable(DugElement):
            type: Literal["variable"] = "variable"
@@ -87,7 +87,7 @@ KG answer objects should have:
     - ``get_node_synonyms()``: Method returning list of node synonyms
 """
 
-from .base import DugElement
+from .base import DugElement, References
 from .concept import CONCEPT_TYPE, DugConcept
 from .types import InputFile
 from .utils import (
@@ -122,6 +122,7 @@ DugConcept.model_rebuild()
 __all__ = [
     # Core classes
     "DugElement",
+    "References",
     "DugConcept",
     # Constants
     "CONCEPT_TYPE",

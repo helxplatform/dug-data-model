@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
+from .base import References
 from .citable import DugCitable
 
 DOCUMENT_TYPE = "document"
@@ -55,7 +56,7 @@ class DugDocument(DugCitable):
     document_type: str = Field(
         "", description="Kind of document; recommended values are listed in DOCUMENT_KINDS."
     )
-    content_list: list[str] = Field(
+    content_list: Annotated[list[str], References("content")] = Field(
         default_factory=list, description="IDs of this document's DugContent, in reading order."
     )
 

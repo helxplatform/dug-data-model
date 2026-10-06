@@ -7,7 +7,8 @@ entities inherit from.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -15,6 +16,22 @@ from .utils import complex_handler, dedupe_and_sort
 
 if TYPE_CHECKING:
     from .concept import DugConcept
+
+
+@dataclass(frozen=True)
+class References:
+    """Marks a `list[str]` field as holding the IDs of other elements.
+
+    `validate_references()` checks the fields that carry this marker, and only those, so a
+    field is never taken for a list of IDs because of its name::
+
+        variable_list: Annotated[list[str], References("variable")] = Field(default_factory=list)
+
+    `element_type` is the `type` the referenced elements should have. It is empty when that
+    varies, as for `parents`, whose type `parent_type` gives.
+    """
+
+    element_type: str = ""
 
 
 class DugElement(BaseModel):
@@ -44,7 +61,7 @@ class DugElement(BaseModel):
     action: str = ""
     """URL or action identifier associated with this element."""
 
-    parents: list[str] = Field(default_factory=list)
+    parents: Annotated[list[str], References()] = Field(default_factory=list)
     """IDs of parent elements in the hierarchy."""
 
     parent_type: str = ""

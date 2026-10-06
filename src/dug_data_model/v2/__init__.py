@@ -1,4 +1,4 @@
-from .base import DugElement
+from .base import DugElement, References
 from .concept import CONCEPT_TYPE, DugConcept
 from .variable import VARIABLE_TYPE, DugVariable
 from .study import STUDY_TYPE, DugStudy
@@ -55,6 +55,7 @@ DugResource.model_rebuild()
 __all__ = [
     # Core classes
     "DugElement",
+    "References",
     "DugConcept",
     "DugVariable",
     "DugStudy",

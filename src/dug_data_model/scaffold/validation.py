@@ -10,6 +10,7 @@ from collections.abc import Iterable
 from functools import cache
 from typing import TYPE_CHECKING
 
+from .base import References
 from .utils import get_all_ids
 
 if TYPE_CHECKING:
@@ -66,16 +67,21 @@ def validate_unique_ids(elements: Iterable[DugElement]) -> None:
 
 
 @cache
-def _reference_fields(cls: type[DugElement]) -> tuple[str, ...]:
-    """Return the names of *cls*'s fields that hold IDs of other elements."""
-    return tuple(name for name in cls.model_fields if name == "parents" or name.endswith("_list"))
+def _reference_fields(cls: type[DugElement]) -> tuple[tuple[str, References], ...]:
+    """Return the name and `References` marker of each of *cls*'s fields that hold IDs."""
+    return tuple(
+        (name, marker)
+        for name, field in cls.model_fields.items()
+        for marker in field.metadata
+        if isinstance(marker, References)
+    )
 
 
 def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str]]:
     """Find IDs that elements refer to but that are not in the collection.
 
-    An element refers to others through `parents` and through any field whose name ends in
-    `_list` (e.g. `variable_list`, `section_list`, `document_list`, `content_list`).
+    An element refers to others through the fields marked with `References`: `parents`, and
+    in v2 `variable_list`, `section_list`, `document_list`, `resource_list` and `content_list`.
 
     Args:
         elements: An iterable of DugElement objects.
@@ -88,7 +94,7 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
     known_ids = get_all_ids(all_elements)
     missing: dict[str, set[str]] = {}
     for elem in all_elements:
-        for field_name in _reference_fields(type(elem)):
+        for field_name, _ in _reference_fields(type(elem)):
             for ref in getattr(elem, field_name):
                 if ref not in known_ids:
                     missing.setdefault(field_name, set()).add(ref)
@@ -96,7 +102,7 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
 
 
 def validate_references(elements: Iterable[DugElement]) -> None:
-    """Validate that every parent and `*_list` reference points at an element in the collection.
+    """Validate that every `References` field points at elements in the collection.
 
     This is opt-in rather than part of loading, because a producer may legitimately split
     related elements across several files.

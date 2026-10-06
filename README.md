@@ -243,6 +243,20 @@ class DugVariable(DugElement):
         return {**base, "data_type": self.data_type}
 ```
 
+A field that holds the IDs of other elements should carry the `References` marker, with the
+`type` those elements should have, so that `validate_references()` checks it. Its name does
+not matter:
+
+```python
+from typing import Annotated
+from pydantic import Field
+from .base import DugElement, References
+
+class DugStudy(DugElement):
+    type: Literal["study"] = "study"
+    variable_list: Annotated[list[str], References("variable")] = Field(default_factory=list)
+```
+
 #### 2. Define your Indexable union
 
 In `types.py`, define a union of all element types that can be indexed:
