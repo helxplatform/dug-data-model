@@ -331,7 +331,7 @@ class TestDugElementParsedList:
         }
         assert type(elements[4]) is DugDocument
         assert isinstance(elements[5], DugContent)
-        # A document is a resource, but a "resource" dict must not load as a document.
+        # Documents and resources share DugCitable, but each loads as its own class.
         assert type(elements[6]) is DugResource
 
     def test_wrong_type_raises(self):
