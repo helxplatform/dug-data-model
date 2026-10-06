@@ -42,11 +42,14 @@ class DugDocument(DugCitable):
 
     A document holds no text of its own. Whatever could be read out of the file lives in its
     `DugContent` children (`content_list`), so that every piece of text is searchable and
-    annotatable in the same way, and so that whether text may be shown is decided once, on the
-    content that would be shown. A document whose text could not be read -- a scanned PDF, or
-    a file the curator named that no parser handles -- is still a document: it is listed and
-    linked to, with no content. Bulk data files (recordings, scans, spreadsheets of primary
-    data) are not documents; a producer inventories them on the resource they came from.
+    annotatable in the same way. The document's `license` decides whether there is any
+    content at all: a producer emits content only when the licence allows the text to be
+    incorporated (`can_include_content()` in `licenses.py`). A document is still a document
+    when it has no content, whether because its text could not be read -- a scanned PDF, or a
+    file the curator named that no parser handles -- or because its licence does not allow
+    it: it is listed and linked to, and found by its title and description. Bulk data files
+    (recordings, scans, spreadsheets of primary data) are not documents; a producer
+    inventories them on the resource they came from.
     """
 
     type: Literal["document"] = DOCUMENT_TYPE

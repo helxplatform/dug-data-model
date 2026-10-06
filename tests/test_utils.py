@@ -199,9 +199,8 @@ class TestCompactDump:
         assert dumped == {"id": "S", "type": "study", "name": "Study", "description": ""}
 
     def test_writes_defaults_that_say_something(self):
-        # A permission or a kind must not change meaning if a later model changes its default.
-        content = compact_dump(DugContent(id="d/h", name="H", description="t"))
-        assert content["can_display_content"] is False
+        # An order or a kind must not change meaning if a later model changes its default.
+        content = compact_dump(DugContent(id="d/h", name="H", description="", content="t"))
         assert content["position"] == 0
         assert "level" not in content and "parents" not in content
         resource = compact_dump(DugResource(id="r", name="R", description=""))
@@ -213,7 +212,8 @@ class TestCompactDump:
         assert compact_dump(variable)["data_type"] == ""
 
     def test_id_type_name_come_first(self):
-        dumped = compact_dump(DugContent(id="d/h", name="H", description="t", position=2))
+        dumped = compact_dump(DugContent(id="d/h", name="H", description="", content="t",
+                                         position=2))
         assert list(dumped)[:3] == ["id", "type", "name"]
         assert "ml_ready_desc" not in dumped
 
@@ -226,13 +226,14 @@ class TestCompactDump:
         assert dumped["concepts"]["c1"]["concepts"]["c2"]["name"] == "Inner"
 
     def test_round_trips_through_the_model(self):
-        content = DugContent(id="d/h", name="H", description="text", position=3, parents=["d"])
+        content = DugContent(id="d/h", name="H", description="", content="text", position=3,
+                             parents=["d"])
         (restored,) = DugElementParsedList.validate_python([compact_dump(content)])
         assert restored == content
 
     def test_serialize_compact_then_load(self, tmp_path):
         elements = [DugStudy(id="S", name="Study", description=""),
-                    DugContent(id="S/c", name="H", description="t", page=2)]
+                    DugContent(id="S/c", name="H", description="", content="t", page=2)]
         path = tmp_path / "out.json"
         serialize_elements(elements, path, compact=True)
         assert '"ml_ready_desc"' not in path.read_text()

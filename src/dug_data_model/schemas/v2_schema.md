@@ -43,14 +43,17 @@ ontology CURIEs) and knowledge-graph query results.
 A piece of a `DugDocument`'s text: a heading and the body under it.
 
 Content is the only element that holds a document's text. A `DugDocument` describes and
-links to a file; if the file's text can be read, it is split into DugContent children, one
-per heading (or a single one when there are no headings). `name` is the heading and
-`description` is the text. `parents` holds the ID of the containing document, with
-`parent_type` set to 'document'.
+links to a file; if the file's text can be read, and the document's licence allows the
+text to be incorporated, it is split into DugContent children, one per heading (or a
+single one when there are no headings). `name` is the heading and `content` is the text
+under it. `description` is metadata about the piece, as on every other element, and is
+usually empty. `parents` holds the ID of the containing document, with `parent_type` set
+to 'document'.
 
-Because content is the only element with anything to display, it is also the only one
-that carries `can_display_content`. Producers set it from the document's licence with
-`can_display()` (see `licenses.py`); the document itself does not repeat it.
+Content carries no licence or display flag of its own: the licence is stated once, on the
+document, and content exists only when that licence permits it (see `licenses.py`). A
+document whose text may not be incorporated has no content, so the case shows in the
+shape of the data rather than in a flag that an index or a UI has to remember to honour.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -70,7 +73,7 @@ that carries `can_display_content`. Producers set it from the document's licence
 | `position` | `int` | No | `0` | 0-based order of this content within its document. |
 | `level` | `int` | No | `None` | Heading depth (1 = top level) when the source format exposes it. |
 | `page` | `int` | No | `None` | 1-based page this content starts on, for paginated formats. |
-| `can_display_content` | `bool` | No | `False` | True only when the licence permits showing the text in a user interface; producers set it with can_display() from DISPLAYABLE_LICENSES. When False, the text is indexed but should not be shown, and users should be sent to `action` instead. |
+| `content` | `str` | Yes | - | The text under the heading. Required, so that a file written when the text was held in `description` fails to load instead of loading with no text. |
 
 ## DugDocument
 
@@ -85,11 +88,14 @@ it, so code that picks out deposits by class does not pick up their files too.
 
 A document holds no text of its own. Whatever could be read out of the file lives in its
 `DugContent` children (`content_list`), so that every piece of text is searchable and
-annotatable in the same way, and so that whether text may be shown is decided once, on the
-content that would be shown. A document whose text could not be read -- a scanned PDF, or
-a file the curator named that no parser handles -- is still a document: it is listed and
-linked to, with no content. Bulk data files (recordings, scans, spreadsheets of primary
-data) are not documents; a producer inventories them on the resource they came from.
+annotatable in the same way. The document's `license` decides whether there is any
+content at all: a producer emits content only when the licence allows the text to be
+incorporated (`can_include_content()` in `licenses.py`). A document is still a document
+when it has no content, whether because its text could not be read -- a scanned PDF, or a
+file the curator named that no parser handles -- or because its licence does not allow
+it: it is listed and linked to, and found by its title and description. Bulk data files
+(recordings, scans, spreadsheets of primary data) are not documents; a producer
+inventories them on the resource they came from.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -109,7 +115,7 @@ data) are not documents; a producer inventories them on the resource they came f
 | `repository` | `str` | No | `""` | Slug of the repository hosting this item; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
 | `doi` | `str` | No | `""` | Bare DOI of this item, without a resolver prefix; empty when unknown. |
-| `license` | `str` | No | `""` | SPDX licence identifier; empty when unknown. |
+| `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. |
 | `file_name` | `str` | No | `""` | Original file name, e.g. 'README.pdf'. |
 | `mime_type` | `str` | No | `""` | IANA media type, e.g. 'application/pdf'. |
 | `document_type` | `str` | No | `""` | Kind of document; recommended values are listed in DOCUMENT_KINDS. |
@@ -144,7 +150,7 @@ a resource.
 | `repository` | `str` | No | `""` | Slug of the repository hosting this item; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
 | `doi` | `str` | No | `""` | Bare DOI of this item, without a resolver prefix; empty when unknown. |
-| `license` | `str` | No | `""` | SPDX licence identifier; empty when unknown. |
+| `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. |
 | `resource_type` | `str` | No | `"dataset"` | Kind of resource; recommended values are listed in RESOURCE_KINDS. |
 | `document_list` | `list[str]` | No | - | IDs of the DugDocuments that came from this resource. |
 

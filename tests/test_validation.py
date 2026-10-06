@@ -84,7 +84,7 @@ def _document_tree():
         DugStudy(id="s1", name="Study", description="desc", document_list=["d1"]),
         DugDocument(id="d1", name="Doc", description="", content_list=["d1/a"],
                     parents=["s1"], parent_type="study"),
-        DugContent(id="d1/a", name="A", description="text",
+        DugContent(id="d1/a", name="A", description="", content="text",
                    parents=["d1"], parent_type="document"),
     ]
 
@@ -158,7 +158,7 @@ class TestInconsistentReferences:
 
     def test_parent_type_left_empty_is_not_checked(self):
         study = DugStudy(id="s1", name="Study", description="desc")
-        content = DugContent(id="c", name="C", description="", parents=["s1"])
+        content = DugContent(id="c", name="C", description="", content="", parents=["s1"])
         assert find_inconsistent_references([study, content]) == []
 
     def test_a_listed_child_that_names_another_parent(self):

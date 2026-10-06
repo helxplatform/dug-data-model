@@ -8,7 +8,8 @@ inventory on each resource. The extracted text is CC-BY-4.0, from Min Gon Kim, K
 al. and Kai Yu, Samantha Schmitt, Bin He et al. (Carnegie Mellon University). It is a frozen
 example of the shape, refreshed when the model changes, not a contract with that producer.
 Since that commit it has been re-written with this package's compact_dump(), which now always
-writes fields whose default says something (`resource_type`, `position`).
+writes fields whose default says something (`resource_type`, `position`), and its content
+elements' text has moved from `description` to `content`, dropping `can_display_content`.
 """
 
 import json
@@ -23,6 +24,7 @@ from dug_data_model.v2 import (
     DugElementParsedList,
     DugResource,
     DugStudy,
+    can_include_content,
     compact_dump,
     count_by_type,
     filter_by_type,
@@ -65,12 +67,12 @@ class TestRealOutput:
             assert document.id in resource.document_list
             assert document.id in study.document_list
 
-    def test_content_carries_its_documents_action_and_display_flag(self, elements):
+    def test_content_holds_text_under_a_licence_that_allows_it(self, elements):
         for content in filter_by_type(elements, CONTENT_TYPE):
             document = get_element_by_id(elements, content.parents[0])
             assert content.action == document.action
-            assert document.license == "CC-BY-4.0"
-            assert content.can_display_content is True
+            assert content.content and content.description == ""
+            assert document.license == "CC-BY-4.0" and can_include_content(document.license)
 
     def test_documents_hold_no_text_and_share_their_resources_fields(self, elements):
         for document in filter_by_type(elements, DOCUMENT_TYPE):

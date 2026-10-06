@@ -27,7 +27,11 @@ class DugCitable(DugElement):
     doi: str = Field(
         "", description="Bare DOI of this item, without a resolver prefix; empty when unknown."
     )
-    license: str = Field("", description="SPDX licence identifier; empty when unknown.")
+    license: str = Field(
+        "",
+        description="SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not "
+        "list (e.g. all rights reserved); empty when unknown.",
+    )
 
     def get_searchable_dict(self) -> dict[str, Any]:
         es_elem = super().get_searchable_dict()

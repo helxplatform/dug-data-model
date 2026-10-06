@@ -7,7 +7,7 @@ from .citable import DugCitable
 from .document import DOCUMENT_KINDS, DOCUMENT_TYPE, DugDocument
 from .content import CONTENT_TYPE, DugContent
 from .resource import REPOSITORY_KINDS, RESOURCE_KINDS, RESOURCE_TYPE, DugResource
-from .licenses import DISPLAYABLE_LICENSES, can_display
+from .licenses import CONTENT_LICENSES, can_include_content
 from .types import (
     InputFile,
     Indexable,
@@ -84,9 +84,9 @@ __all__ = [
     "RESOURCE_TYPE",
     "RESOURCE_KINDS",
     "REPOSITORY_KINDS",
-    "DISPLAYABLE_LICENSES",
+    "CONTENT_LICENSES",
     # Licences
-    "can_display",
+    "can_include_content",
     # Filtering and grouping
     "filter_by_type",
     "group_by_type",

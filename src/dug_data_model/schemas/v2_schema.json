@@ -106,7 +106,7 @@
       "type": "object"
     },
     "DugContent": {
-      "description": "A piece of a `DugDocument`'s text: a heading and the body under it.\n\nContent is the only element that holds a document's text. A `DugDocument` describes and\nlinks to a file; if the file's text can be read, it is split into DugContent children, one\nper heading (or a single one when there are no headings). `name` is the heading and\n`description` is the text. `parents` holds the ID of the containing document, with\n`parent_type` set to 'document'.\n\nBecause content is the only element with anything to display, it is also the only one\nthat carries `can_display_content`. Producers set it from the document's licence with\n`can_display()` (see `licenses.py`); the document itself does not repeat it.",
+      "description": "A piece of a `DugDocument`'s text: a heading and the body under it.\n\nContent is the only element that holds a document's text. A `DugDocument` describes and\nlinks to a file; if the file's text can be read, and the document's licence allows the\ntext to be incorporated, it is split into DugContent children, one per heading (or a\nsingle one when there are no headings). `name` is the heading and `content` is the text\nunder it. `description` is metadata about the piece, as on every other element, and is\nusually empty. `parents` holds the ID of the containing document, with `parent_type` set\nto 'document'.\n\nContent carries no licence or display flag of its own: the licence is stated once, on the\ndocument, and content exists only when that licence permits it (see `licenses.py`). A\ndocument whose text may not be incorporated has no content, so the case shows in the\nshape of the data rather than in a flag that an index or a UI has to remember to honour.",
       "properties": {
         "id": {
           "title": "Id",
@@ -221,23 +221,23 @@
           "description": "1-based page this content starts on, for paginated formats.",
           "title": "Page"
         },
-        "can_display_content": {
-          "default": false,
-          "description": "True only when the licence permits showing the text in a user interface; producers set it with can_display() from DISPLAYABLE_LICENSES. When False, the text is indexed but should not be shown, and users should be sent to `action` instead.",
-          "title": "Can Display Content",
-          "type": "boolean"
+        "content": {
+          "description": "The text under the heading. Required, so that a file written when the text was held in `description` fails to load instead of loading with no text.",
+          "title": "Content",
+          "type": "string"
         }
       },
       "required": [
         "id",
         "name",
-        "description"
+        "description",
+        "content"
       ],
       "title": "DugContent",
       "type": "object"
     },
     "DugDocument": {
-      "description": "A single file: a README, protocol, report, poster, ...\n\nA repository deposit is a `DugResource`; one file in it is a document. Like a resource, a\ndocument has a title (`name`), a summary (`description`), a landing or download URL\n(`action`), and the citation fields `repository`, `authors`, `doi` and `license`, which\nboth get from `DugCitable`; it adds what only a file has: `file_name`, `mime_type` and\n`document_type`. A document is not a resource: `isinstance(x, DugResource)` is false for\nit, so code that picks out deposits by class does not pick up their files too.\n\nA document holds no text of its own. Whatever could be read out of the file lives in its\n`DugContent` children (`content_list`), so that every piece of text is searchable and\nannotatable in the same way, and so that whether text may be shown is decided once, on the\ncontent that would be shown. A document whose text could not be read -- a scanned PDF, or\na file the curator named that no parser handles -- is still a document: it is listed and\nlinked to, with no content. Bulk data files (recordings, scans, spreadsheets of primary\ndata) are not documents; a producer inventories them on the resource they came from.",
+      "description": "A single file: a README, protocol, report, poster, ...\n\nA repository deposit is a `DugResource`; one file in it is a document. Like a resource, a\ndocument has a title (`name`), a summary (`description`), a landing or download URL\n(`action`), and the citation fields `repository`, `authors`, `doi` and `license`, which\nboth get from `DugCitable`; it adds what only a file has: `file_name`, `mime_type` and\n`document_type`. A document is not a resource: `isinstance(x, DugResource)` is false for\nit, so code that picks out deposits by class does not pick up their files too.\n\nA document holds no text of its own. Whatever could be read out of the file lives in its\n`DugContent` children (`content_list`), so that every piece of text is searchable and\nannotatable in the same way. The document's `license` decides whether there is any\ncontent at all: a producer emits content only when the licence allows the text to be\nincorporated (`can_include_content()` in `licenses.py`). A document is still a document\nwhen it has no content, whether because its text could not be read -- a scanned PDF, or a\nfile the curator named that no parser handles -- or because its licence does not allow\nit: it is listed and linked to, and found by its title and description. Bulk data files\n(recordings, scans, spreadsheets of primary data) are not documents; a producer\ninventories them on the resource they came from.",
       "properties": {
         "id": {
           "title": "Id",
@@ -339,7 +339,7 @@
         },
         "license": {
           "default": "",
-          "description": "SPDX licence identifier; empty when unknown.",
+          "description": "SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown.",
           "title": "License",
           "type": "string"
         },
@@ -481,7 +481,7 @@
         },
         "license": {
           "default": "",
-          "description": "SPDX licence identifier; empty when unknown.",
+          "description": "SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown.",
           "title": "License",
           "type": "string"
         },
