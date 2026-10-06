@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from .citable import DugCitable
 
@@ -13,10 +13,14 @@ RESOURCE_KINDS: tuple[str, ...] = (
     "software",
     "publication",
     "website",
-    "document",
     "other",
 )
-"""Recommended values for `DugResource.resource_type`."""
+"""Recommended values for `DugResource.resource_type`.
+
+'document' is not one of them, and `DugResource` rejects it: a single file is a `DugDocument`,
+and a resource calling itself a document would be found by a filter on `resource_type` but not
+by one on the element type.
+"""
 
 REPOSITORY_KINDS: tuple[str, ...] = (
     "figshare",
@@ -57,6 +61,13 @@ class DugResource(DugCitable):
     document_list: list[str] = Field(
         default_factory=list, description="IDs of the DugDocuments that came from this resource."
     )
+
+    @field_validator("resource_type")
+    @classmethod
+    def _not_a_document(cls, value: str) -> str:
+        if value.strip().casefold() == "document":
+            raise ValueError("a single file is a DugDocument (type 'document'), not a DugResource")
+        return value
 
     def get_searchable_dict(self) -> dict[str, Any]:
         es_elem = super().get_searchable_dict()

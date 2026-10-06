@@ -215,6 +215,12 @@ class TestDugResource:
         assert r.resource_type == "dataset"
         assert "dataset" in RESOURCE_KINDS
 
+    @pytest.mark.parametrize("resource_type", ["document", " Document "])
+    def test_a_resource_cannot_call_itself_a_document(self, resource_type):
+        assert "document" not in RESOURCE_KINDS
+        with pytest.raises(ValidationError, match="DugDocument"):
+            DugResource(id="r1", name="README", description="", resource_type=resource_type)
+
     def test_repository_slugs_are_recommended_not_enforced(self):
         assert "zenodo" in REPOSITORY_KINDS
         r = DugResource(id="r1", name="Data", description="", repository="lab-server")

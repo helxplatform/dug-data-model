@@ -157,7 +157,8 @@ applies them, so that every producer sets the flag the same way; NonCommercial a
 NoDerivatives licences are left for a person to decide.
 
 `document_type` and `resource_type` are free strings; `DOCUMENT_KINDS` and `RESOURCE_KINDS`
-list the recommended values.
+list the recommended values. The one value a resource may not have is `resource_type="document"`:
+a single file is a `DugDocument`.
 
 #### Reference producer conventions
 
