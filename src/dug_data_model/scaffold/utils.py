@@ -66,34 +66,49 @@ def dedupe_and_sort(items: list[str]) -> list[str]:
 
 
 def compact_dump(element: DugElement) -> dict[str, Any]:
-    """Return *element* as a dict with default-valued fields left out.
+    """Return *element* as a dict with empty fields left out.
 
-    For files that people read and review: fields still at the model's defaults are
-    omitted, as is the computed `ml_ready_desc`, which repeats the description. Loading
-    the result through `DugElementParsedList` restores every omitted field. `type` is put
-    back by hand because it has a default, so `exclude_defaults` would drop it, but it is
-    the discriminator that says which class to load. `id`, `type` and `name` come first so
-    the file scans top-down. `ml_ready_desc` is also left out of the concepts in `concepts`,
+    For files that people read and review: a field is omitted when it is still at its
+    default and that default is empty (`""`, `[]`, `{}` or `None`), as is the computed
+    `ml_ready_desc`, which repeats the description. Loading the result through
+    `DugElementParsedList` restores every omitted field. A field whose default says
+    something -- `can_display_content=False`, `resource_type="dataset"`, `type` -- is
+    always written, so that a file keeps its meaning if a later model changes that default.
+    (`exclude_defaults=True` was tried first and dropped those too.) `id`, `type` and `name`
+    come first so the file scans top-down. `ml_ready_desc` is also left out of the concepts in `concepts`,
     the only base field that holds other elements, and of the concepts in theirs, at any depth.
 
     This dumps in Python mode, like `serialize_elements()`'s default path, so that objects
     in `Any` fields (such as identifier objects in `DugConcept.identifiers`) reach
     `complex_handler()`. `mode="json"` would make pydantic raise on them instead.
     """
-    dumped = element.model_dump(exclude_defaults=True, exclude=_compact_exclude(element))
+    dumped = element.model_dump(exclude=_compact_exclude(element))
+    dumped.pop("type", None)
     return {"id": dumped.pop("id"), "type": element.type, "name": dumped.pop("name"), **dumped}
 
 
-def _compact_exclude(element: DugElement) -> dict[str, Any]:
-    """Return the `model_dump()` exclude spec that leaves `ml_ready_desc` out at every depth.
+def _is_empty(value: Any) -> bool:
+    return value is None or (isinstance(value, (str, list, dict)) and not value)
 
-    `concepts` is keyed by each concept's actual ID because a concept may hold concepts of its
-    own; `"__all__"` would reach only one level down.
+
+def _compact_exclude(element: DugElement) -> dict[str, Any]:
+    """Return the `model_dump()` exclude spec for `compact_dump()`.
+
+    It names `ml_ready_desc` and every field still at an empty default, on *element* and on
+    each concept in its `concepts`, at any depth. `concepts` is keyed by each concept's
+    actual ID because a concept may hold concepts of its own; `"__all__"` would reach only
+    one level down.
     """
-    return {
-        "ml_ready_desc": True,
-        "concepts": {key: _compact_exclude(concept) for key, concept in element.concepts.items()},
-    }
+    exclude: dict[str, Any] = {"ml_ready_desc": True}
+    for name, field in type(element).model_fields.items():
+        default = field.get_default(call_default_factory=True)
+        if _is_empty(default) and getattr(element, name) == default:
+            exclude[name] = True
+    if "concepts" not in exclude:
+        exclude["concepts"] = {
+            key: _compact_exclude(concept) for key, concept in element.concepts.items()
+        }
+    return exclude
 
 
 def serialize_elements(

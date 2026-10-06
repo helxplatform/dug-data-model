@@ -57,6 +57,7 @@
     ],
     "doi": "10.6084/m9.figshare.24867198",
     "license": "CC-BY-4.0",
+    "resource_type": "dataset",
     "document_list": [
       "HDP00009/assets/24867198/README.pdf"
     ]
@@ -94,6 +95,7 @@
     ],
     "doi": "10.6084/m9.figshare.25036019",
     "license": "CC-BY-4.0",
+    "resource_type": "dataset",
     "document_list": [
       "HDP00009/assets/25036019/README.pdf"
     ]
@@ -135,6 +137,7 @@
       "HDP00009/assets/24867198/README.pdf"
     ],
     "parent_type": "document",
+    "position": 0,
     "page": 1,
     "can_display_content": true
   },
@@ -173,6 +176,7 @@
       "HDP00009/assets/25036019/README.pdf"
     ],
     "parent_type": "document",
+    "position": 0,
     "page": 1,
     "can_display_content": true
   }

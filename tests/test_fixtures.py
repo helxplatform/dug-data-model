@@ -7,6 +7,8 @@ as resources, one PDF README in each as a document with a single content element
 inventory on each resource. The extracted text is CC-BY-4.0, from Min Gon Kim, Kai Yu, Bin He et
 al. and Kai Yu, Samantha Schmitt, Bin He et al. (Carnegie Mellon University). It is a frozen
 example of the shape, refreshed when the model changes, not a contract with that producer.
+Since that commit it has been re-written with this package's compact_dump(), which now always
+writes fields whose default says something (`resource_type`, `position`).
 """
 
 import json

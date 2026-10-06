@@ -22,6 +22,7 @@ from dug_data_model.v2 import (
     load_elements,
     DugElementParsedList,
     DugContent,
+    DugResource,
 )
 
 
@@ -196,6 +197,20 @@ class TestCompactDump:
     def test_keeps_type_even_though_it_is_a_default(self):
         dumped = compact_dump(DugStudy(id="S", name="Study", description=""))
         assert dumped == {"id": "S", "type": "study", "name": "Study", "description": ""}
+
+    def test_writes_defaults_that_say_something(self):
+        # A permission or a kind must not change meaning if a later model changes its default.
+        content = compact_dump(DugContent(id="d/h", name="H", description="t"))
+        assert content["can_display_content"] is False
+        assert content["position"] == 0
+        assert "level" not in content and "parents" not in content
+        resource = compact_dump(DugResource(id="r", name="R", description=""))
+        assert resource["resource_type"] == "dataset"
+        assert "repository" not in resource
+
+    def test_keeps_an_emptied_field_whose_default_is_not_empty(self):
+        variable = DugVariable(id="v", name="V", description="", data_type="")
+        assert compact_dump(variable)["data_type"] == ""
 
     def test_id_type_name_come_first(self):
         dumped = compact_dump(DugContent(id="d/h", name="H", description="t", position=2))
