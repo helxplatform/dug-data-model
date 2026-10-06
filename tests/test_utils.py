@@ -202,6 +202,14 @@ class TestCompactDump:
         assert list(dumped)[:3] == ["id", "type", "name"]
         assert "ml_ready_desc" not in dumped
 
+    def test_leaves_ml_ready_desc_out_of_concepts_at_every_depth(self):
+        inner = DugConcept(id="c2", name="Inner", description="d2")
+        middle = DugConcept(id="c1", name="Middle", description="d1", concepts={"c2": inner})
+        variable = DugVariable(id="v1", name="V", description="d", concepts={"c1": middle})
+        dumped = compact_dump(variable)
+        assert "ml_ready_desc" not in json.dumps(dumped)
+        assert dumped["concepts"]["c1"]["concepts"]["c2"]["name"] == "Inner"
+
     def test_round_trips_through_the_model(self):
         content = DugContent(id="d/h", name="H", description="text", position=3, parents=["d"])
         (restored,) = DugElementParsedList.validate_python([compact_dump(content)])

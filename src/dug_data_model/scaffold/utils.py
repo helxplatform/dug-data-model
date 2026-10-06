@@ -73,18 +73,27 @@ def compact_dump(element: DugElement) -> dict[str, Any]:
     the result through `DugElementParsedList` restores every omitted field. `type` is put
     back by hand because it has a default, so `exclude_defaults` would drop it, but it is
     the discriminator that says which class to load. `id`, `type` and `name` come first so
-    the file scans top-down. `ml_ready_desc` is also left out of the concepts nested in
-    `concepts`, the only base field that holds other elements.
+    the file scans top-down. `ml_ready_desc` is also left out of the concepts in `concepts`,
+    the only base field that holds other elements, and of the concepts in theirs, at any depth.
 
     This dumps in Python mode, like `serialize_elements()`'s default path, so that objects
     in `Any` fields (such as identifier objects in `DugConcept.identifiers`) reach
     `complex_handler()`. `mode="json"` would make pydantic raise on them instead.
     """
-    dumped = element.model_dump(
-        exclude_defaults=True,
-        exclude={"ml_ready_desc": True, "concepts": {"__all__": {"ml_ready_desc"}}},
-    )
+    dumped = element.model_dump(exclude_defaults=True, exclude=_compact_exclude(element))
     return {"id": dumped.pop("id"), "type": element.type, "name": dumped.pop("name"), **dumped}
+
+
+def _compact_exclude(element: DugElement) -> dict[str, Any]:
+    """Return the `model_dump()` exclude spec that leaves `ml_ready_desc` out at every depth.
+
+    `concepts` is keyed by each concept's actual ID because a concept may hold concepts of its
+    own; `"__all__"` would reach only one level down.
+    """
+    return {
+        "ml_ready_desc": True,
+        "concepts": {key: _compact_exclude(concept) for key, concept in element.concepts.items()},
+    }
 
 
 def serialize_elements(
