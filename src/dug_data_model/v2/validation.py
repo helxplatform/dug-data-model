@@ -27,13 +27,27 @@ class DuplicateIdError(ValueError):
 
 
 class MissingReferenceError(ValueError):
-    """Raised when referenced IDs are not found."""
+    """Raised when referenced IDs are not found.
 
-    def __init__(self, missing_ids: set[str], reference_type: str = "parent"):
+    `missing_ids` holds every missing ID; `by_field` says which field each one came from, as
+    `find_missing_references()` returns it, and the message lists them field by field.
+    """
+
+    def __init__(
+        self,
+        missing_ids: set[str],
+        reference_type: str = "parent",
+        by_field: dict[str, set[str]] | None = None,
+    ):
         self.missing_ids = missing_ids
         self.reference_type = reference_type
-        ids_str = ", ".join(sorted(missing_ids))
-        super().__init__(f"Missing {reference_type} references: {ids_str}")
+        self.by_field = by_field if by_field is not None else {reference_type: missing_ids}
+        super().__init__(
+            "; ".join(
+                f"Missing {field} references: {', '.join(sorted(ids))}"
+                for field, ids in sorted(self.by_field.items())
+            )
+        )
 
 
 def find_duplicate_ids(elements: Iterable[DugElement]) -> dict[str, int]:
@@ -116,4 +130,6 @@ def validate_references(elements: Iterable[DugElement]) -> None:
     missing = find_missing_references(elements)
     if missing:
         all_missing = set().union(*missing.values())
-        raise MissingReferenceError(all_missing, reference_type="/".join(sorted(missing)))
+        raise MissingReferenceError(
+            all_missing, reference_type="/".join(sorted(missing)), by_field=missing
+        )

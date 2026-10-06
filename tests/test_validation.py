@@ -106,6 +106,20 @@ class TestReferences:
         assert exc_info.value.missing_ids == {"s1", "d1/a"}
         assert exc_info.value.reference_type == "content_list/parents"
 
+    def test_validate_says_which_field_each_missing_id_came_from(self):
+        elements = [_document_tree()[1]]
+        with pytest.raises(MissingReferenceError) as exc_info:
+            validate_references(elements)
+        assert exc_info.value.by_field == {"content_list": {"d1/a"}, "parents": {"s1"}}
+        assert str(exc_info.value) == (
+            "Missing content_list references: d1/a; Missing parents references: s1"
+        )
+
+    def test_error_built_without_by_field_keeps_its_old_message(self):
+        error = MissingReferenceError({"b", "a"})
+        assert str(error) == "Missing parent references: a, b"
+        assert error.by_field == {"parent": {"a", "b"}}
+
     def test_accepts_a_generator(self):
         assert find_missing_references(e for e in _document_tree()) == {}
 
