@@ -197,7 +197,11 @@ not schema: nothing here is validated.
   its resource's `files` inventory and nothing more.
 ## Scaffold: Creating a New Model Version
 
-Use the scaffold CLI to generate a new data model version inside the package:
+Use the scaffold CLI to generate a new data model version inside the package. It copies the
+scaffold's files rather than importing them, so a released version does not change when the
+scaffold does. `utils.py` and `validation.py` do not depend on the version, so they are kept
+identical in the scaffold and in `v2/`: make a fix in both, and `tests/test_scaffold_copies.py`
+fails if one is forgotten.
 
 ```bash
 # Create v3 of the data model
