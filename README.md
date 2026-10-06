@@ -84,48 +84,63 @@ reports, posters. Three element types describe them, one per level:
   (`description`). This is the only element that carries text, and therefore the only one
   with `can_display_content`.
 
+The example below is a shortened copy of HEAL study
+[HDP00009](https://healdata.org/portal/discovery/HDP00009) as the reference producer (see
+below) writes it; the whole record is in
+[`tests/fixtures/heal_hdp00009.json`](tests/fixtures/heal_hdp00009.json). The study has two
+Figshare deposits, each with a PDF README; only the first deposit is shown here, and long
+descriptions and the author list are cut short.
+
 ```python
 from dug_data_model.v2 import DugContent, DugDocument, DugResource, DugStudy, can_display
 
 dataset = DugResource(
-    id="HDP1/resources/zenodo-org-records-1",
-    name="Pain behaviour in mice: data and methods",
-    description="Behavioural data and analysis notes.",
-    action="https://zenodo.org/records/1",   # landing page
+    id="HDP00009/resources/doi-org-10-6084-m9-figshare-24867198",
+    name="Treating pain in sickle cell disease by means of focused ultrasound neuromodulation "
+         "(Behavior assessments and analyses)",
+    description="We have demonstrated a novel transcranial focused ultrasound technology ...",
+    action="https://doi.org/10.6084/m9.figshare.24867198",  # landing page
     resource_type="dataset",                 # see RESOURCE_KINDS
-    repository="zenodo",
-    doi="10.5281/zenodo.1",
+    repository="figshare",
+    authors=["Min Gon Kim", "Kai Yu", "Chih-Yu Yeh"],     # the first 3 of 12
+    doi="10.6084/m9.figshare.24867198",
     license="CC-BY-4.0",
-    parents=["HDP1"], parent_type="study",
-    document_list=["HDP1/assets/README.docx"],
+    metadata={"files": {"count": 9, "bytes": 410870, "by_extension": {".pdf": 1, ".xlsx": 8}}},
+    parents=["HDP00009"], parent_type="study",
+    document_list=["HDP00009/assets/24867198/README.pdf"],
 )
 
 readme = DugDocument(
-    id="HDP1/assets/README.docx",
-    name="README.docx",                      # display title
+    id="HDP00009/assets/24867198/README.pdf",
+    name="README: behavior assessments and analyses",  # display title
     description="",
-    action="https://zenodo.org/records/1",
-    repository="zenodo",                     # a DugCitable field, like license
+    action=dataset.action,                   # the deposit, as the file has no DOI of its own
+    repository="figshare",                   # a DugCitable field, like license
     license="CC-BY-4.0",                     # the deposit's licence unless the file states its own
-    file_name="README.docx",
-    mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    file_name="README.pdf",
+    mime_type="application/pdf",
     document_type="readme",                  # see DOCUMENT_KINDS
+    metadata={"page_count": 2},
     parents=[dataset.id], parent_type="resource",
-    content_list=["HDP1/assets/README.docx/general-methods"],
+    content_list=["HDP00009/assets/24867198/README.pdf/readmepdf"],
 )
 
 section = DugContent(
-    id="HDP1/assets/README.docx/general-methods",
-    name="General Methods",                  # the heading
-    description="This repository contains ...",  # the text under it
+    id="HDP00009/assets/24867198/README.pdf/readmepdf",
+    name="README.pdf",                       # the heading; this PDF has none, so its file name
+    description="README\n\nThis readme document describes the organized behavior "
+                "assessment with analysis. ...",  # the text under it
     action=readme.action,                    # where to send a user who may not see the text
-    position=0, level=1,
+    position=0, page=1,
     can_display_content=can_display(readme.license),  # see DISPLAYABLE_LICENSES
     parents=[readme.id], parent_type="document",
 )
 
 study = DugStudy(
-    id="HDP1", name="A study", description="...",
+    id="HDP00009",
+    name="Treating pain in sickle cell disease by means of focused ultrasound neuromodulation",
+    description="Researchers will develop a novel transcranial focused ultrasound (tFUS) ...",
+    metadata={"appl_id": 9932691},
     resource_list=[dataset.id], document_list=[readme.id],
 )
 ```
