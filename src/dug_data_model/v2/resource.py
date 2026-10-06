@@ -59,7 +59,7 @@ class DugResource(DugCitable):
     resource_type: str = Field(
         "dataset", description="Kind of resource; recommended values are listed in RESOURCE_KINDS."
     )
-    document_list: Annotated[list[str], References("document")] = Field(
+    document_list: Annotated[list[str], References("document", children=True)] = Field(
         default_factory=list, description="IDs of the DugDocuments that came from this resource."
     )
 

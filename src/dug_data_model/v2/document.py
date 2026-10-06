@@ -56,7 +56,7 @@ class DugDocument(DugCitable):
     document_type: str = Field(
         "", description="Kind of document; recommended values are listed in DOCUMENT_KINDS."
     )
-    content_list: Annotated[list[str], References("content")] = Field(
+    content_list: Annotated[list[str], References("content", children=True)] = Field(
         default_factory=list, description="IDs of this document's DugContent, in reading order."
     )
 

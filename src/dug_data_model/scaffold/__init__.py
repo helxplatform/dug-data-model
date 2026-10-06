@@ -108,8 +108,10 @@ from .utils import (
 )
 from .validation import (
     DuplicateIdError,
+    InconsistentReferenceError,
     MissingReferenceError,
     find_duplicate_ids,
+    find_inconsistent_references,
     find_missing_references,
     validate_references,
     validate_unique_ids,
@@ -148,8 +150,10 @@ __all__ = [
     "serialize_elements",
     # Validation
     "DuplicateIdError",
+    "InconsistentReferenceError",
     "MissingReferenceError",
     "find_duplicate_ids",
+    "find_inconsistent_references",
     "find_missing_references",
     "validate_references",
     "validate_unique_ids",

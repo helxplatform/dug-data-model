@@ -27,11 +27,16 @@ class References:
 
         variable_list: Annotated[list[str], References("variable")] = Field(default_factory=list)
 
-    `element_type` is the `type` the referenced elements should have. It is empty when that
-    varies, as for `parents`, whose type `parent_type` gives.
+    `element_type` is the `type` the referenced elements should have. When that varies, it is
+    empty and `type_from` names the field of the same element that gives it, as `parent_type`
+    does for `parents`. `children` says the listed elements are this element's children: each
+    should name this element in its `parents`, and every element of `element_type` that names
+    this element as a parent should be listed.
     """
 
     element_type: str = ""
+    type_from: str = ""
+    children: bool = False
 
 
 class DugElement(BaseModel):
@@ -61,7 +66,7 @@ class DugElement(BaseModel):
     action: str = ""
     """URL or action identifier associated with this element."""
 
-    parents: Annotated[list[str], References()] = Field(default_factory=list)
+    parents: Annotated[list[str], References(type_from="parent_type")] = Field(default_factory=list)
     """IDs of parent elements in the hierarchy."""
 
     parent_type: str = ""

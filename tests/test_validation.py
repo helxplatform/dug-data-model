@@ -11,10 +11,13 @@ from dug_data_model.v2 import (
     DugContent,
     DugStudy,
     DugVariable,
+    DugResource,
     DuplicateIdError,
+    InconsistentReferenceError,
     MissingReferenceError,
     References,
     find_duplicate_ids,
+    find_inconsistent_references,
     find_missing_references,
     validate_references,
     validate_unique_ids,
@@ -122,6 +125,69 @@ class TestReferences:
 
     def test_accepts_a_generator(self):
         assert find_missing_references(e for e in _document_tree()) == {}
+
+
+def _resource_tree():
+    return [
+        DugStudy(id="s1", name="Study", description="desc", resource_list=["r1"],
+                 document_list=["d1"]),
+        DugResource(id="r1", name="Deposit", description="", document_list=["d1"],
+                    parents=["s1"], parent_type="study"),
+        DugDocument(id="d1", name="Doc", description="", parents=["r1"], parent_type="resource"),
+    ]
+
+
+class TestInconsistentReferences:
+    def test_consistent_trees_have_no_problems(self):
+        assert find_inconsistent_references(_document_tree()) == []
+        assert find_inconsistent_references(_resource_tree()) == []
+
+    def test_a_list_naming_the_wrong_type(self):
+        study, document, content = _document_tree()
+        study.document_list = ["d1/a"]
+        document.parents = []
+        assert find_inconsistent_references([study, document, content]) == [
+            "s1: document_list names d1/a, a content, not a document",
+        ]
+
+    def test_a_parent_of_the_wrong_type(self):
+        study, document, content = _document_tree()
+        content.parents = ["s1"]
+        problems = find_inconsistent_references([study, document, content])
+        assert "d1/a: parents names s1, a study, not a document" in problems
+
+    def test_parent_type_left_empty_is_not_checked(self):
+        study = DugStudy(id="s1", name="Study", description="desc")
+        content = DugContent(id="c", name="C", description="", parents=["s1"])
+        assert find_inconsistent_references([study, content]) == []
+
+    def test_a_listed_child_that_names_another_parent(self):
+        study, resource, document = _resource_tree()
+        document.parents, document.parent_type = ["s1"], "study"
+        assert find_inconsistent_references([study, resource, document]) == [
+            "r1: document_list lists d1, whose parents do not include it",
+        ]
+
+    def test_a_child_its_parent_does_not_list(self):
+        study, document, content = _document_tree()
+        document.content_list = []
+        assert find_inconsistent_references([study, document, content]) == [
+            "d1/a: names d1 as a parent, but its content_list does not list it",
+        ]
+
+    def test_lists_that_are_not_children_need_not_agree(self):
+        # The study lists d1 although d1's parent is the resource, as the README describes.
+        assert "s1" not in _resource_tree()[2].parents
+        validate_references(_resource_tree())
+
+    def test_validate_raises_on_inconsistency(self):
+        study, document, content = _document_tree()
+        document.content_list = []
+        with pytest.raises(InconsistentReferenceError) as exc_info:
+            validate_references([study, document, content])
+        assert exc_info.value.problems == [
+            "d1/a: names d1 as a parent, but its content_list does not list it",
+        ]
 
 
 class _Tagged(DugElement):
