@@ -74,13 +74,14 @@ that carries `can_display_content`. Producers set it from the document's licence
 
 ## DugDocument
 
-A `DugResource` that is a single file: a README, protocol, report, poster, ...
+A single file: a README, protocol, report, poster, ...
 
-A repository deposit is a resource; one file in it is a document. Being a resource, a
+A repository deposit is a `DugResource`; one file in it is a document. Like a resource, a
 document has a title (`name`), a summary (`description`), a landing or download URL
-(`action`), and the citable `repository`, `authors`, `doi` and `license` fields; it adds
-what only a file has: `file_name`, `mime_type` and `document_type`. Its `resource_type`
-is always 'document', and `document_list`, inherited from the resource, is normally empty.
+(`action`), and the citation fields `repository`, `authors`, `doi` and `license`, which
+both get from `DugCitable`; it adds what only a file has: `file_name`, `mime_type` and
+`document_type`. A document is not a resource: `isinstance(x, DugResource)` is false for
+it, so code that picks out deposits by class does not pick up their files too.
 
 A document holds no text of its own. Whatever could be read out of the file lives in its
 `DugContent` children (`content_list`), so that every piece of text is searchable and
@@ -105,12 +106,10 @@ data) are not documents; a producer inventories them on the resource they came f
 | `optional_terms` | `list[str]` | No | - |  |
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
-| `resource_type` | `"document"` | No | `"document"` | Always 'document' for a DugDocument. |
-| `repository` | `str` | No | `""` | Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS. |
+| `repository` | `str` | No | `""` | Slug of the repository hosting this item; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
-| `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |
+| `doi` | `str` | No | `""` | Bare DOI of this item, without a resolver prefix; empty when unknown. |
 | `license` | `str` | No | `""` | SPDX licence identifier; empty when unknown. |
-| `document_list` | `list[str]` | No | - | IDs of the DugDocuments that came from this resource. |
 | `file_name` | `str` | No | `""` | Original file name, e.g. 'README.pdf'. |
 | `mime_type` | `str` | No | `""` | IANA media type, e.g. 'application/pdf'. |
 | `document_type` | `str` | No | `""` | Kind of document; recommended values are listed in DOCUMENT_KINDS. |
@@ -123,9 +122,9 @@ Something outside Dug that can be pointed to with a URL and a description.
 The main use is the repository deposit that a study's files came from, e.g. a Figshare
 article, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's
 title, `description` is its description, and `action` is its landing page. A resource
-with a DOI is citable. A single file within a deposit is a `DugDocument`, a subclass of
-this class, so `isinstance(x, DugResource)` is also true of documents: to get deposits
-only, filter on `type` (`filter_by_type(elements, RESOURCE_TYPE)`).
+with a DOI is citable. A single file within a deposit is a `DugDocument`, which shares the
+citation fields (`repository`, `authors`, `doi`, `license`) through `DugCitable` but is not
+a resource.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -142,11 +141,11 @@ only, filter on `type` (`filter_by_type(elements, RESOURCE_TYPE)`).
 | `optional_terms` | `list[str]` | No | - |  |
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
-| `resource_type` | `str` | No | `"dataset"` | Kind of resource; recommended values are listed in RESOURCE_KINDS. |
-| `repository` | `str` | No | `""` | Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS. |
+| `repository` | `str` | No | `""` | Slug of the repository hosting this item; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
-| `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |
+| `doi` | `str` | No | `""` | Bare DOI of this item, without a resolver prefix; empty when unknown. |
 | `license` | `str` | No | `""` | SPDX licence identifier; empty when unknown. |
+| `resource_type` | `str` | No | `"dataset"` | Kind of resource; recommended values are listed in RESOURCE_KINDS. |
 | `document_list` | `list[str]` | No | - | IDs of the DugDocuments that came from this resource. |
 
 ## DugSection

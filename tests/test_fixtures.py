@@ -70,11 +70,10 @@ class TestRealOutput:
             assert document.license == "CC-BY-4.0"
             assert content.can_display_content is True
 
-    def test_documents_hold_no_text_and_inherit_their_resources_fields(self, elements):
+    def test_documents_hold_no_text_and_share_their_resources_fields(self, elements):
         for document in filter_by_type(elements, DOCUMENT_TYPE):
             resource = get_element_by_id(elements, document.parents[0])
             assert document.description == ""
-            assert document.resource_type == "document"
             assert document.repository == resource.repository == "figshare"
             assert document.mime_type == "application/pdf"
             assert document.metadata["page_count"] >= 1

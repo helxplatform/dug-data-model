@@ -237,7 +237,7 @@
       "type": "object"
     },
     "DugDocument": {
-      "description": "A `DugResource` that is a single file: a README, protocol, report, poster, ...\n\nA repository deposit is a resource; one file in it is a document. Being a resource, a\ndocument has a title (`name`), a summary (`description`), a landing or download URL\n(`action`), and the citable `repository`, `authors`, `doi` and `license` fields; it adds\nwhat only a file has: `file_name`, `mime_type` and `document_type`. Its `resource_type`\nis always 'document', and `document_list`, inherited from the resource, is normally empty.\n\nA document holds no text of its own. Whatever could be read out of the file lives in its\n`DugContent` children (`content_list`), so that every piece of text is searchable and\nannotatable in the same way, and so that whether text may be shown is decided once, on the\ncontent that would be shown. A document whose text could not be read -- a scanned PDF, or\na file the curator named that no parser handles -- is still a document: it is listed and\nlinked to, with no content. Bulk data files (recordings, scans, spreadsheets of primary\ndata) are not documents; a producer inventories them on the resource they came from.",
+      "description": "A single file: a README, protocol, report, poster, ...\n\nA repository deposit is a `DugResource`; one file in it is a document. Like a resource, a\ndocument has a title (`name`), a summary (`description`), a landing or download URL\n(`action`), and the citation fields `repository`, `authors`, `doi` and `license`, which\nboth get from `DugCitable`; it adds what only a file has: `file_name`, `mime_type` and\n`document_type`. A document is not a resource: `isinstance(x, DugResource)` is false for\nit, so code that picks out deposits by class does not pick up their files too.\n\nA document holds no text of its own. Whatever could be read out of the file lives in its\n`DugContent` children (`content_list`), so that every piece of text is searchable and\nannotatable in the same way, and so that whether text may be shown is decided once, on the\ncontent that would be shown. A document whose text could not be read -- a scanned PDF, or\na file the curator named that no parser handles -- is still a document: it is listed and\nlinked to, with no content. Bulk data files (recordings, scans, spreadsheets of primary\ndata) are not documents; a producer inventories them on the resource they came from.",
       "properties": {
         "id": {
           "title": "Id",
@@ -317,16 +317,9 @@
           "title": "Tags",
           "type": "array"
         },
-        "resource_type": {
-          "const": "document",
-          "default": "document",
-          "description": "Always 'document' for a DugDocument.",
-          "title": "Resource Type",
-          "type": "string"
-        },
         "repository": {
           "default": "",
-          "description": "Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS.",
+          "description": "Slug of the repository hosting this item; recommended values are listed in REPOSITORY_KINDS.",
           "title": "Repository",
           "type": "string"
         },
@@ -340,7 +333,7 @@
         },
         "doi": {
           "default": "",
-          "description": "Bare DOI of this resource, without a resolver prefix; empty when unknown.",
+          "description": "Bare DOI of this item, without a resolver prefix; empty when unknown.",
           "title": "Doi",
           "type": "string"
         },
@@ -349,14 +342,6 @@
           "description": "SPDX licence identifier; empty when unknown.",
           "title": "License",
           "type": "string"
-        },
-        "document_list": {
-          "description": "IDs of the DugDocuments that came from this resource.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Document List",
-          "type": "array"
         },
         "file_name": {
           "default": "",
@@ -394,7 +379,7 @@
       "type": "object"
     },
     "DugResource": {
-      "description": "Something outside Dug that can be pointed to with a URL and a description.\n\nThe main use is the repository deposit that a study's files came from, e.g. a Figshare\narticle, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's\ntitle, `description` is its description, and `action` is its landing page. A resource\nwith a DOI is citable. A single file within a deposit is a `DugDocument`, a subclass of\nthis class, so `isinstance(x, DugResource)` is also true of documents: to get deposits\nonly, filter on `type` (`filter_by_type(elements, RESOURCE_TYPE)`).",
+      "description": "Something outside Dug that can be pointed to with a URL and a description.\n\nThe main use is the repository deposit that a study's files came from, e.g. a Figshare\narticle, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's\ntitle, `description` is its description, and `action` is its landing page. A resource\nwith a DOI is citable. A single file within a deposit is a `DugDocument`, which shares the\ncitation fields (`repository`, `authors`, `doi`, `license`) through `DugCitable` but is not\na resource.",
       "properties": {
         "id": {
           "title": "Id",
@@ -474,15 +459,9 @@
           "title": "Tags",
           "type": "array"
         },
-        "resource_type": {
-          "default": "dataset",
-          "description": "Kind of resource; recommended values are listed in RESOURCE_KINDS.",
-          "title": "Resource Type",
-          "type": "string"
-        },
         "repository": {
           "default": "",
-          "description": "Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS.",
+          "description": "Slug of the repository hosting this item; recommended values are listed in REPOSITORY_KINDS.",
           "title": "Repository",
           "type": "string"
         },
@@ -496,7 +475,7 @@
         },
         "doi": {
           "default": "",
-          "description": "Bare DOI of this resource, without a resolver prefix; empty when unknown.",
+          "description": "Bare DOI of this item, without a resolver prefix; empty when unknown.",
           "title": "Doi",
           "type": "string"
         },
@@ -504,6 +483,12 @@
           "default": "",
           "description": "SPDX licence identifier; empty when unknown.",
           "title": "License",
+          "type": "string"
+        },
+        "resource_type": {
+          "default": "dataset",
+          "description": "Kind of resource; recommended values are listed in RESOURCE_KINDS.",
+          "title": "Resource Type",
           "type": "string"
         },
         "document_list": {

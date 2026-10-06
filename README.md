@@ -74,9 +74,12 @@ reports, posters. Three element types describe them, one per level:
 - **`DugResource`** — something outside Dug with a URL: chiefly the repository deposit (e.g. a
   Zenodo dataset) that a study's files were downloaded from, but also a program website, a
   software repository or a publication.
-- **`DugDocument`** — a resource that is a single file. It subclasses `DugResource`, so it has
-  the same title, description, link, `repository`, `authors`, `doi` and `license`, and adds
-  `file_name`, `mime_type` and `document_type`. A document holds **no text of its own**.
+- **`DugDocument`** — a single file. Like a resource it has a title, description and link,
+  and it shares the citation fields `repository`, `authors`, `doi` and `license` with
+  `DugResource` through their common base class, `DugCitable`; it adds `file_name`,
+  `mime_type` and `document_type`. A document is not a resource, so
+  `isinstance(x, DugResource)` picks out deposits only (`isinstance(x, DugCitable)` picks out
+  both). A document holds **no text of its own**.
 - **`DugContent`** — a piece of a document's text: a heading (`name`) and the body under it
   (`description`). This is the only element that carries text, and therefore the only one
   with `can_display_content`.
@@ -102,11 +105,11 @@ readme = DugDocument(
     name="README.docx",                      # display title
     description="",
     action="https://zenodo.org/records/1",
-    repository="zenodo",                     # inherited from DugResource, like license
+    repository="zenodo",                     # a DugCitable field, like license
     license="CC-BY-4.0",                     # the deposit's licence unless the file states its own
     file_name="README.docx",
     mime_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    document_type="readme",                  # see DOCUMENT_KINDS; resource_type is always "document"
+    document_type="readme",                  # see DOCUMENT_KINDS
     parents=[dataset.id], parent_type="resource",
     content_list=["HDP1/assets/README.docx/general-methods"],
 )
@@ -318,7 +321,7 @@ python -m dug_data_model.scaffold schema v2 --format markdown -o src/dug_data_mo
 | `DugStudy` | `"study"` | A research study; a dataset it draws on is a `DugResource` |
 | `DugSection` | `"section"` | A section or instrument within a study |
 | `DugResource` | `"resource"` | Something external with a URL and a description, usually the repository deposit (dataset) a study's files came from |
-| `DugDocument` | `"document"` | A `DugResource` that is a single file (README, protocol, report, poster, ...); holds no text itself |
+| `DugDocument` | `"document"` | A single file (README, protocol, report, poster, ...), with the same citation fields as a `DugResource`; holds no text itself |
 | `DugContent` | `"content"` | A headed piece of a `DugDocument`'s text; the only element with text and a `can_display_content` flag |
 
 ## Development

@@ -12,6 +12,7 @@ from dug_data_model.v2 import (
     DugDocument,
     DugContent,
     DugResource,
+    DugCitable,
     DugElementParsedList,
     load_elements,
     serialize_elements,
@@ -118,18 +119,22 @@ class TestDugDocument:
         assert "content" not in DugDocument.model_fields
         assert "can_display_content" not in DugDocument.model_fields
 
-    def test_is_a_resource_that_is_a_single_file(self):
+    def test_shares_the_citation_fields_but_is_not_a_resource(self):
         d = DugDocument(id="d1", name="README", description="", repository="zenodo",
                         license="CC-BY-4.0", doi="10.1234/abc")
-        assert isinstance(d, DugResource)
-        assert d.resource_type == "document"
-        assert "document" in RESOURCE_KINDS
+        assert isinstance(d, DugCitable)
+        assert not isinstance(d, DugResource)
         assert d.repository == "zenodo"
-        assert d.document_list == []
+        assert "resource_type" not in DugDocument.model_fields
+        assert "document_list" not in DugDocument.model_fields
 
-    def test_resource_type_cannot_be_anything_but_document(self):
-        with pytest.raises(ValidationError):
-            DugDocument(id="d1", name="README", description="", resource_type="dataset")
+    def test_resources_by_class_are_not_documents(self):
+        elements = DugElementParsedList.validate_python([
+            {"id": "r1", "name": "Deposit", "description": "", "type": "resource"},
+            {"id": "d1", "name": "README", "description": "", "type": "document"},
+        ])
+        assert [e.id for e in elements if isinstance(e, DugResource)] == ["r1"]
+        assert [e.id for e in elements if isinstance(e, DugCitable)] == ["r1", "d1"]
 
     def test_recommended_kinds_are_not_enforced(self):
         assert "readme" in DOCUMENT_KINDS
@@ -144,7 +149,7 @@ class TestDugDocument:
         )
         es = d.get_searchable_dict()
         assert es["element_type"] == "document"
-        assert es["resource_type"] == "document"
+        assert "resource_type" not in es
         assert es["file_name"] == "README.pdf"
         assert es["mime_type"] == "application/pdf"
         assert es["document_type"] == "readme"

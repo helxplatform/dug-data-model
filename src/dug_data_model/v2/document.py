@@ -4,7 +4,7 @@ from typing import Any, Literal
 
 from pydantic import Field
 
-from .resource import DugResource
+from .citable import DugCitable
 
 DOCUMENT_TYPE = "document"
 
@@ -29,14 +29,15 @@ kind of document does not need a model release. Producers should prefer these va
 """
 
 
-class DugDocument(DugResource):
-    """A `DugResource` that is a single file: a README, protocol, report, poster, ...
+class DugDocument(DugCitable):
+    """A single file: a README, protocol, report, poster, ...
 
-    A repository deposit is a resource; one file in it is a document. Being a resource, a
+    A repository deposit is a `DugResource`; one file in it is a document. Like a resource, a
     document has a title (`name`), a summary (`description`), a landing or download URL
-    (`action`), and the citable `repository`, `authors`, `doi` and `license` fields; it adds
-    what only a file has: `file_name`, `mime_type` and `document_type`. Its `resource_type`
-    is always 'document', and `document_list`, inherited from the resource, is normally empty.
+    (`action`), and the citation fields `repository`, `authors`, `doi` and `license`, which
+    both get from `DugCitable`; it adds what only a file has: `file_name`, `mime_type` and
+    `document_type`. A document is not a resource: `isinstance(x, DugResource)` is false for
+    it, so code that picks out deposits by class does not pick up their files too.
 
     A document holds no text of its own. Whatever could be read out of the file lives in its
     `DugContent` children (`content_list`), so that every piece of text is searchable and
@@ -49,9 +50,6 @@ class DugDocument(DugResource):
 
     type: Literal["document"] = DOCUMENT_TYPE
 
-    resource_type: Literal["document"] = Field(
-        "document", description="Always 'document' for a DugDocument."
-    )
     file_name: str = Field("", description="Original file name, e.g. 'README.pdf'.")
     mime_type: str = Field("", description="IANA media type, e.g. 'application/pdf'.")
     document_type: str = Field(
