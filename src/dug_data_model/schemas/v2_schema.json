@@ -618,6 +618,7 @@
       "type": "object"
     },
     "DugStudy": {
+      "description": "A research study.\n\nIts publications are `DugResource`s with `resource_type` 'publication' or 'preprint' in\n`resource_list`; `document_list` and `resource_list` list every document and resource in\nthe study, whatever their immediate parent. An earlier version had a `publications` list\nof bare strings; nothing read it, and a file that still carries it loads without it.",
       "properties": {
         "id": {
           "title": "Id",
@@ -695,13 +696,6 @@
             "type": "object"
           },
           "title": "Tags",
-          "type": "array"
-        },
-        "publications": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Publications",
           "type": "array"
         },
         "variable_list": {

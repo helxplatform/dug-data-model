@@ -397,7 +397,7 @@ python -m dug_data_model.scaffold schema v2 --format markdown -o src/dug_data_mo
 | Class | `type` field | Description |
 |---|---|---|
 | `DugVariable` | `"variable"` | A data variable (e.g., dbGaP variable or CDE) |
-| `DugStudy` | `"study"` | A research study; a dataset it draws on is a `DugResource` |
+| `DugStudy` | `"study"` | A research study; its datasets and publications are `DugResource`s in `resource_list` |
 | `DugSection` | `"section"` | A section or instrument within a study |
 | `DugResource` | `"resource"` | Anything external with a URL, at any size: a deposit, a dataset, a publication, a website |
 | `DugDocument` | `"document"` | One file in one format (README, protocol, paper PDF, data XLSX, ...), with the same citation fields as a `DugResource`; holds no text itself |

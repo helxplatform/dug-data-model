@@ -71,6 +71,12 @@ class TestDugStudy:
         assert "variable_list" in d
         assert "section_list" in d
 
+    def test_publications_are_resources_not_a_list_of_strings(self):
+        assert "publications" not in DugStudy.model_fields
+        s = DugStudy.model_validate({"id": "s1", "name": "Study", "description": "",
+                                     "publications": ["10.1234/abc"]})  # an old file still loads
+        assert "publications" not in s.get_searchable_dict()
+
     def test_document_and_resource_lists(self):
         s = DugStudy(id="s1", name="Study", description="A study",
                      document_list=["d1"], resource_list=["r1"])

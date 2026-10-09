@@ -188,6 +188,13 @@ way, so a consumer that starts from the study never has to climb.
 
 ## DugStudy
 
+A research study.
+
+Its publications are `DugResource`s with `resource_type` 'publication' or 'preprint' in
+`resource_list`; `document_list` and `resource_list` list every document and resource in
+the study, whatever their immediate parent. An earlier version had a `publications` list
+of bare strings; nothing read it, and a file that still carries it loads without it.
+
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `id` | `str` | Yes | - |  |
@@ -203,7 +210,6 @@ way, so a consumer that starts from the study never has to climb.
 | `optional_terms` | `list[str]` | No | - |  |
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
-| `publications` | `list[str]` | No | - |  |
 | `variable_list` | `list[str]` | No | - |  |
 | `section_list` | `list[str]` | No | - |  |
 | `document_list` | `list[str]` | No | - |  |
