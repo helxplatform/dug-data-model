@@ -12,17 +12,19 @@ STUDY_TYPE = "study"
 class DugStudy(DugElement):
     """A research study.
 
-    Its publications are `DugResource`s with `resource_type` 'publication' or 'preprint' in
-    `resource_list`; `document_list` and `resource_list` list every document and resource in
-    the study, whatever their immediate parent. An earlier version had a `publications` list
-    of bare strings; nothing read it, and a file that still carries it loads without it.
+    A study does not list its resources and documents; they name it in `parents`, and
+    `build_parent_map()` or a query on `parents` finds them. That is because the study and
+    its resources need not come from the same producer (DUG-796: the non-data-dictionary
+    producer emits resources and documents for a study the MDS ingest emits), so a list on
+    the study would be complete only by luck. Its publications are `DugResource`s with
+    `resource_type` 'publication' or 'preprint'. Earlier versions had `publications`, a list
+    of bare strings nothing read, then `document_list` and `resource_list`; a file that still
+    carries any of them loads without it.
     """
 
     type: Literal["study"] = STUDY_TYPE
     variable_list: Annotated[list[str], References("variable")] = Field(default_factory=list)
     section_list: Annotated[list[str], References("section")] = Field(default_factory=list)
-    document_list: Annotated[list[str], References("document")] = Field(default_factory=list)
-    resource_list: Annotated[list[str], References("resource")] = Field(default_factory=list)
     abstract: str = ""
 
     def get_searchable_dict(self) -> dict[str, Any]:
@@ -31,7 +33,5 @@ class DugStudy(DugElement):
             **es_elem,
             "variable_list": self.variable_list,
             "section_list": self.section_list,
-            "document_list": self.document_list,
-            "resource_list": self.resource_list,
             "abstract": self.abstract,
         }

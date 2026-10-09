@@ -9,7 +9,9 @@ al. and Kai Yu, Samantha Schmitt, Bin He et al. (Carnegie Mellon University). It
 example of the shape, refreshed when the model changes, not a contract with that producer.
 Since that commit it has been re-written with this package's compact_dump(), which now always
 writes fields whose default says something (`resource_type`, `position`), and its content
-elements' text has moved from `description` to `content`, dropping `can_display_content`.
+elements' text has moved from `description` to `content`, dropping `can_display_content`, and
+the study's `document_list` and `resource_list` are gone: the resources and documents name it
+in `parents`.
 """
 
 import json
@@ -65,7 +67,6 @@ class TestRealOutput:
             assert resource.parents == [study.id] and resource.parent_type == "study"
             assert content.id in document.content_list
             assert document.id in resource.document_list
-            assert document.id in study.document_list
 
     def test_content_holds_text_under_a_licence_that_allows_it(self, elements):
         for content in filter_by_type(elements, CONTENT_TYPE):

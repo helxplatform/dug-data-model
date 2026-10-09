@@ -106,7 +106,8 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
     """Find IDs that elements refer to but that are not in the collection.
 
     An element refers to others through the fields marked with `References`: `parents`, and
-    in v2 `variable_list`, `section_list`, `document_list`, `resource_list` and `content_list`.
+    in v2 `variable_list`, `section_list`, `document_list`, `resource_list` and `content_list`
+    (the last three on resources and documents; a study does not list its resources).
 
     Args:
         elements: An iterable of DugElement objects.

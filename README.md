@@ -167,28 +167,31 @@ study = DugStudy(
     name="Treating pain in sickle cell disease by means of focused ultrasound neuromodulation",
     description="Researchers will develop a novel transcranial focused ultrasound (tFUS) ...",
     metadata={"appl_id": 9932691},
-    resource_list=[dataset.id, preprint.id], document_list=[readme.id],
-)
+)   # the study lists nothing: its resources and documents name it in `parents`
 ```
 
 An element has a single `parent_type`, so a document's parent is either its resource or,
 when it did not come from a known resource, its study. A resource's parent is likewise either
 its study or an enclosing resource: a Zenodo community holds deposits, a project website holds
 a press release page, and each inner resource names the outer one in `parents` with
-`parent_type="resource"` and is listed in the outer one's `resource_list`. `DugStudy.document_list`
-and `DugStudy.resource_list` list every document and every resource in the study either way.
-`validate_references()` checks that all of these IDs resolve within a collection, that each
-points at the right type of element (a `content_list` names content, a `parents` entry has the
-element's `parent_type`), and that a document's `content_list` and a resource's `document_list`
-and `resource_list` agree with their children's `parents`. The study's two lists are not held
-to that last rule, since they also list elements whose parent is a resource.
+`parent_type="resource"` and is listed in the outer one's `resource_list`. `validate_references()`
+checks that all of these IDs resolve within a collection, that each points at the right type of
+element (a `content_list` names content, a `parents` entry has the element's `parent_type`),
+and that a document's `content_list` and a resource's `document_list` and `resource_list`
+agree with their children's `parents`.
 
-Going the other way, from a piece of content up to its study, follows `parents` through the
-document and then the resource: three hops, or two when the document hangs off the study
-directly. That is deliberate. A content element records only its document, and a document
-only where it came from; the study lists its documents and resources directly, so a consumer
-that starts from the study never has to climb. `build_parent_map()` and `get_children()` in
-`dug_data_model.v2` walk the chain in either direction.
+The study itself lists nothing. Its resources and documents name it in `parents`, and a
+consumer finds them with `build_parent_map()` or `get_children()` in `dug_data_model.v2`, or
+in an index with a query on `parents`. Going the other way, from a piece of content up to its
+study, follows `parents` through the document and then the resource: three hops, or two when
+the document hangs off the study directly. **This is a decision to review.** An earlier
+revision gave `DugStudy` a `document_list` and a `resource_list` naming every document and
+resource in the study, so that a consumer starting from the study never had to climb. They
+were dropped because the study and its resources need not come from the same producer: under
+[DUG-796](https://renci.atlassian.net/browse/DUG-796) the non-data-dictionary producer emits
+resources and documents for a study that the MDS ingest emits separately, so nothing could
+fill the study's lists and a consumer trusting them would see an empty study. `parents` is
+the one link that a producer emitting only the children can write.
 
 Text is only ever incorporated under a licence that allows it, and the licence is stated once,
 on the document. A producer emits `DugContent` for a document only when
@@ -397,7 +400,7 @@ python -m dug_data_model.scaffold schema v2 --format markdown -o src/dug_data_mo
 | Class | `type` field | Description |
 |---|---|---|
 | `DugVariable` | `"variable"` | A data variable (e.g., dbGaP variable or CDE) |
-| `DugStudy` | `"study"` | A research study; its datasets and publications are `DugResource`s in `resource_list` |
+| `DugStudy` | `"study"` | A research study; its datasets, publications and documents name it in their `parents` |
 | `DugSection` | `"section"` | A section or instrument within a study |
 | `DugResource` | `"resource"` | Anything external with a URL, at any size: a deposit, a dataset, a publication, a website |
 | `DugDocument` | `"document"` | One file in one format (README, protocol, paper PDF, data XLSX, ...), with the same citation fields as a `DugResource`; holds no text itself |

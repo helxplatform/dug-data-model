@@ -71,18 +71,14 @@ class TestDugStudy:
         assert "variable_list" in d
         assert "section_list" in d
 
-    def test_publications_are_resources_not_a_list_of_strings(self):
-        assert "publications" not in DugStudy.model_fields
+    def test_lists_no_publications_resources_or_documents(self):
+        # Its resources and documents name it in `parents`; see the docstring for why.
+        dropped = {"publications", "document_list", "resource_list"}
+        assert not dropped & set(DugStudy.model_fields)
         s = DugStudy.model_validate({"id": "s1", "name": "Study", "description": "",
-                                     "publications": ["10.1234/abc"]})  # an old file still loads
-        assert "publications" not in s.get_searchable_dict()
-
-    def test_document_and_resource_lists(self):
-        s = DugStudy(id="s1", name="Study", description="A study",
-                     document_list=["d1"], resource_list=["r1"])
-        d = s.get_searchable_dict()
-        assert d["document_list"] == ["d1"]
-        assert d["resource_list"] == ["r1"]
+                                     "publications": ["10.1234/abc"], "resource_list": ["r1"],
+                                     "document_list": ["d1"]})  # an old file still loads
+        assert not dropped & set(s.get_searchable_dict())
 
 
 class TestDugConcept:

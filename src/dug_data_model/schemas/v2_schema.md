@@ -190,10 +190,14 @@ way, so a consumer that starts from the study never has to climb.
 
 A research study.
 
-Its publications are `DugResource`s with `resource_type` 'publication' or 'preprint' in
-`resource_list`; `document_list` and `resource_list` list every document and resource in
-the study, whatever their immediate parent. An earlier version had a `publications` list
-of bare strings; nothing read it, and a file that still carries it loads without it.
+A study does not list its resources and documents; they name it in `parents`, and
+`build_parent_map()` or a query on `parents` finds them. That is because the study and
+its resources need not come from the same producer (DUG-796: the non-data-dictionary
+producer emits resources and documents for a study the MDS ingest emits), so a list on
+the study would be complete only by luck. Its publications are `DugResource`s with
+`resource_type` 'publication' or 'preprint'. Earlier versions had `publications`, a list
+of bare strings nothing read, then `document_list` and `resource_list`; a file that still
+carries any of them loads without it.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -212,8 +216,6 @@ of bare strings; nothing read it, and a file that still carries it loads without
 | `tags` | `list[dict[str, str]]` | No | - |  |
 | `variable_list` | `list[str]` | No | - |  |
 | `section_list` | `list[str]` | No | - |  |
-| `document_list` | `list[str]` | No | - |  |
-| `resource_list` | `list[str]` | No | - |  |
 | `abstract` | `str` | No | `""` |  |
 
 ## DugVariable

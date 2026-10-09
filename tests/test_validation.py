@@ -81,7 +81,7 @@ class TestValidateUniqueIds:
 
 def _document_tree():
     return [
-        DugStudy(id="s1", name="Study", description="desc", document_list=["d1"]),
+        DugStudy(id="s1", name="Study", description="desc"),
         DugDocument(id="d1", name="Doc", description="", content_list=["d1/a"],
                     parents=["s1"], parent_type="study"),
         DugContent(id="d1/a", name="A", description="", content="text",
@@ -129,8 +129,7 @@ class TestReferences:
 
 def _resource_tree():
     return [
-        DugStudy(id="s1", name="Study", description="desc", resource_list=["r1"],
-                 document_list=["d1"]),
+        DugStudy(id="s1", name="Study", description="desc"),
         DugResource(id="r1", name="Deposit", description="", document_list=["d1"],
                     parents=["s1"], parent_type="study"),
         DugDocument(id="d1", name="Doc", description="", parents=["r1"], parent_type="resource"),
@@ -144,10 +143,10 @@ class TestInconsistentReferences:
 
     def test_a_list_naming_the_wrong_type(self):
         study, document, content = _document_tree()
-        study.document_list = ["d1/a"]
-        document.parents = []
-        assert find_inconsistent_references([study, document, content]) == [
-            "s1: document_list names d1/a, a content, not a document",
+        other = DugDocument(id="d2", name="Doc 2", description="", parents=["d1"], parent_type="document")
+        document.content_list = ["d2", "d1/a"]
+        assert find_inconsistent_references([study, document, content, other]) == [
+            "d1: content_list names d2, a document, not a content",
         ]
 
     def test_a_parent_of_the_wrong_type(self):
@@ -169,7 +168,7 @@ class TestInconsistentReferences:
         ]
 
     def test_a_resource_inside_a_resource(self):
-        study = DugStudy(id="s1", name="S", description="", resource_list=["community", "deposit"])
+        study = DugStudy(id="s1", name="S", description="")
         community = DugResource(id="community", name="Lab's Zenodo community", description="",
                                 resource_type="website", resource_list=["deposit"],
                                 parents=["s1"], parent_type="study")
@@ -189,9 +188,12 @@ class TestInconsistentReferences:
         ]
 
     def test_lists_that_are_not_children_need_not_agree(self):
-        # The study lists d1 although d1's parent is the resource, as the README describes.
-        assert "s1" not in _resource_tree()[2].parents
-        validate_references(_resource_tree())
+        # variable_list is a reference list but not a children list, so a variable that
+        # names the study as its parent need not be listed, and vice versa.
+        study = DugStudy(id="s1", name="Study", description="desc", variable_list=["v2"])
+        v1 = DugVariable(id="v1", name="A", description="", parents=["s1"], parent_type="study")
+        v2 = DugVariable(id="v2", name="B", description="")
+        validate_references([study, v1, v2])
 
     def test_validate_raises_on_inconsistency(self):
         study, document, content = _document_tree()

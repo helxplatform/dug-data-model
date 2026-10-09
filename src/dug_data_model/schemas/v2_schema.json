@@ -618,7 +618,7 @@
       "type": "object"
     },
     "DugStudy": {
-      "description": "A research study.\n\nIts publications are `DugResource`s with `resource_type` 'publication' or 'preprint' in\n`resource_list`; `document_list` and `resource_list` list every document and resource in\nthe study, whatever their immediate parent. An earlier version had a `publications` list\nof bare strings; nothing read it, and a file that still carries it loads without it.",
+      "description": "A research study.\n\nA study does not list its resources and documents; they name it in `parents`, and\n`build_parent_map()` or a query on `parents` finds them. That is because the study and\nits resources need not come from the same producer (DUG-796: the non-data-dictionary\nproducer emits resources and documents for a study the MDS ingest emits), so a list on\nthe study would be complete only by luck. Its publications are `DugResource`s with\n`resource_type` 'publication' or 'preprint'. Earlier versions had `publications`, a list\nof bare strings nothing read, then `document_list` and `resource_list`; a file that still\ncarries any of them loads without it.",
       "properties": {
         "id": {
           "title": "Id",
@@ -710,20 +710,6 @@
             "type": "string"
           },
           "title": "Section List",
-          "type": "array"
-        },
-        "document_list": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Document List",
-          "type": "array"
-        },
-        "resource_list": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Resource List",
           "type": "array"
         },
         "abstract": {
