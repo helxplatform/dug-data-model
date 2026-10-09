@@ -253,7 +253,17 @@ not schema: nothing here is validated.
   of DOI URLs. Each becomes a `DugResource` with `resource_type="publication"` (or
   `"preprint"`), `action` the URL, `doi` the bare DOI, and `name` the title when the DOI
   resolves (Crossref) and the DOI itself when it does not, since `name` is required. No
-  document is emitted for it unless the full text is fetched.
+  document is emitted for it unless the full text is fetched. A PubMed ID goes in
+  `metadata["pmid"]`, so that a publication can be matched to the knowledge graph's PubMed
+  nodes; the model has no field for it because only publications have one.
+- **Links between resources that are not containment.** A paper is about a deposit, a deposit
+  supplements a paper: DataCite's `relatedIdentifiers`, which Figshare and Zenodo serve. These
+  are copied as given into `metadata["related_identifiers"]` on the resource (a list of
+  `{"relation": "IsSupplementTo", "identifier": "10.1101/...", "type": "DOI"}`), not expressed
+  through `parents`, which is for containment only. A field for them can come when a UI needs
+  to show them.
+- **Download counts** from a repository API go in `metadata["downloads"]` on the resource, as
+  an integer, with `metadata["downloads_as_of"]` holding the ISO date they were read.
 ## Scaffold: Creating a New Model Version
 
 Use the scaffold CLI to generate a new data model version inside the package. It copies the
