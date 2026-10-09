@@ -68,28 +68,40 @@ elements = DugElementParsedList.validate_python(data)
 
 ### Documents and the resources they come from
 
-Studies often come with files that are not data dictionaries: READMEs, protocols, final
-reports, posters. Three element types describe them, one per level:
+Studies come with more than data dictionaries: repository deposits, READMEs, protocols,
+publications, project websites. Three element types describe them, one per level:
 
-- **`DugResource`** — something outside Dug with a URL: chiefly the repository deposit (e.g. a
-  Zenodo dataset) that a study's files were downloaded from, but also a program website, a
-  software repository or a publication.
-- **`DugDocument`** — a single file. Like a resource it has a title, description and link,
-  and it shares the citation fields `repository`, `authors`, `doi` and `license` with
-  `DugResource` through their common base class, `DugCitable`; it adds `file_name`,
-  `mime_type` and `document_type`. A document is not a resource, so
-  `isinstance(x, DugResource)` picks out deposits only (`isinstance(x, DugCitable)` picks out
+- **`DugResource`** — anything outside Dug that has a URL, at whatever size: a program website,
+  a project's page on an NIH site, a press release, a Zenodo community, the Zenodo or Figshare
+  deposit a study's files came from, a dataset with or without a DOI, a publication or
+  preprint. `resource_type` says which (see `RESOURCE_KINDS`).
+- **`DugDocument`** — one file in one format: the deposit's README, the paper's PDF, the
+  dataset's XLSX or ZIP, the HTML of the press release. Like a resource it has a title,
+  description and link, and it shares the citation fields `repository`, `authors`, `doi` and
+  `license` with `DugResource` through their common base class, `DugCitable`; it adds
+  `file_name`, `mime_type` and `document_type`. A document is not a resource, so
+  `isinstance(x, DugResource)` picks out resources only (`isinstance(x, DugCitable)` picks out
   both). A document holds **no text of its own**.
 - **`DugContent`** — a piece of a document's text: a heading (`name`) and the body under it
   (`content`). This is the only element that carries text, and it exists only when the
   document's licence allows the text to be incorporated.
+
+The line between the first two is format, not size or importance. A publication is a
+resource (the work: its DOI, landing page and authors) and its full text is a document under
+it with `document_type="article"`; a dataset on Zenodo is a resource and each downloadable
+file in it may be a document; a press release is a resource and its page captured as text is
+a document with `mime_type="text/html"`. Whether a producer emits a document for every file
+or only for the ones a person would read is its own choice (see the reference producer's
+conventions below).
 
 The example below is a shortened copy of HEAL study
 [HDP00009](https://healdata.org/portal/discovery/HDP00009) as the reference producer (see
 below) writes it; the whole record is in
 [`tests/fixtures/heal_hdp00009.json`](tests/fixtures/heal_hdp00009.json). The study has two
 Figshare deposits, each with a PDF README; only the first deposit is shown here, and long
-descriptions and the author list are cut short.
+descriptions and the author list are cut short. The preprint at the end is not in the fixture:
+it is the paper the README asks users to cite, written as the HEAL Platform's
+`primary_publications` would give it, and shows a publication as a resource with no document.
 
 ```python
 from dug_data_model.v2 import DugContent, DugDocument, DugResource, DugStudy
@@ -137,12 +149,25 @@ section = DugContent(
     parents=[readme.id], parent_type="document",
 )
 
+preprint = DugResource(
+    id="HDP00009/resources/doi-org-10-1101-2022-12-07-519518",
+    name="Low-intensity transcranial focused ultrasound changes pain-associated behaviors by "
+         "modulating pain processing brain circuits",  # from Crossref; the DOI itself if unresolved
+    description="",
+    action="https://doi.org/10.1101/2022.12.07.519518",
+    resource_type="preprint",                # a publication is a resource; its PDF would be
+    repository="biorxiv",                    # a document under it with document_type="article"
+    authors=["Min Gon Kim", "Kai Yu", "Chih-Yu Yeh"],
+    doi="10.1101/2022.12.07.519518",
+    parents=["HDP00009"], parent_type="study",
+)
+
 study = DugStudy(
     id="HDP00009",
     name="Treating pain in sickle cell disease by means of focused ultrasound neuromodulation",
     description="Researchers will develop a novel transcranial focused ultrasound (tFUS) ...",
     metadata={"appl_id": 9932691},
-    resource_list=[dataset.id], document_list=[readme.id],
+    resource_list=[dataset.id, preprint.id], document_list=[readme.id],
 )
 ```
 
@@ -177,7 +202,11 @@ indexed `_source` as is, and was dropped for the shape above.
 
 `document_type` and `resource_type` are free strings; `DOCUMENT_KINDS` and `RESOURCE_KINDS`
 list the recommended values. The one value a resource may not have is `resource_type="document"`:
-a single file is a `DugDocument`.
+a single file is a `DugDocument`. Both lists are coarse on purpose. A finer kind, such as one of
+PubMed's [publication types](https://pubmed.ncbi.nlm.nih.gov/help/#publication-types) ("Review",
+"Randomized Controlled Trial"), belongs in `tags` as `{"category": "publication_type", "value":
+...}`, which every element has and which an index can filter on, rather than in a longer
+`RESOURCE_KINDS`.
 
 #### Reference producer conventions
 
@@ -211,7 +240,13 @@ not schema: nothing here is validated.
 - **Which files become documents.** Files a parser can read (Word, PDF, Markdown, plain text;
   spreadsheets and CSV when asked for). A curated file no parser handles becomes a document
   with no content. Everything else -- recordings, scans, images, primary data -- is counted in
-  its resource's `files` inventory and nothing more.
+  its resource's `files` inventory and nothing more. The model allows a document for any file
+  (`document_type="data"`); this producer chooses not to emit one.
+- **Publications.** The HEAL Platform's `study_metadata.findings.primary_publications` is a list
+  of DOI URLs. Each becomes a `DugResource` with `resource_type="publication"` (or
+  `"preprint"`), `action` the URL, `doi` the bare DOI, and `name` the title when the DOI
+  resolves (Crossref) and the DOI itself when it does not, since `name` is required. No
+  document is emitted for it unless the full text is fetched.
 ## Scaffold: Creating a New Model Version
 
 Use the scaffold CLI to generate a new data model version inside the package. It copies the
@@ -360,8 +395,8 @@ python -m dug_data_model.scaffold schema v2 --format markdown -o src/dug_data_mo
 | `DugVariable` | `"variable"` | A data variable (e.g., dbGaP variable or CDE) |
 | `DugStudy` | `"study"` | A research study; a dataset it draws on is a `DugResource` |
 | `DugSection` | `"section"` | A section or instrument within a study |
-| `DugResource` | `"resource"` | Something external with a URL and a description, usually the repository deposit (dataset) a study's files came from |
-| `DugDocument` | `"document"` | A single file (README, protocol, report, poster, ...), with the same citation fields as a `DugResource`; holds no text itself |
+| `DugResource` | `"resource"` | Anything external with a URL, at any size: a deposit, a dataset, a publication, a website |
+| `DugDocument` | `"document"` | One file in one format (README, protocol, paper PDF, data XLSX, ...), with the same citation fields as a `DugResource`; holds no text itself |
 | `DugContent` | `"content"` | A headed piece of a `DugDocument`'s text, held in `content`; the only element with text, present only under a licence that allows it |
 
 ## Development

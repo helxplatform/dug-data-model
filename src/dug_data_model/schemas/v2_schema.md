@@ -77,14 +77,17 @@ shape of the data rather than in a flag that an index or a UI has to remember to
 
 ## DugDocument
 
-A single file: a README, protocol, report, poster, ...
+One file in one format: a README, a protocol PDF, a paper's PDF, a data XLSX, ...
 
-A repository deposit is a `DugResource`; one file in it is a document. Like a resource, a
-document has a title (`name`), a summary (`description`), a landing or download URL
-(`action`), and the citation fields `repository`, `authors`, `doi` and `license`, which
-both get from `DugCitable`; it adds what only a file has: `file_name`, `mime_type` and
-`document_type`. A document is not a resource: `isinstance(x, DugResource)` is false for
-it, so code that picks out deposits by class does not pick up their files too.
+A `DugResource` is the thing with a URL (a deposit, a publication, a web page); a document
+is one file of it. Its parent is that resource or, when it came from no known resource,
+its study. Like a resource, a document has a title (`name`), a summary (`description`), a
+landing or download URL (`action`), and the citation fields `repository`, `authors`, `doi`
+and `license`, which both get from `DugCitable`; it adds what only a file has:
+`file_name`, `mime_type` and `document_type`. A web page captured as text is a document
+with `mime_type="text/html"` and no `file_name`, under the page's resource. A document is
+not a resource: `isinstance(x, DugResource)` is false for it, so code that picks out
+deposits by class does not pick up their files too.
 
 A document holds no text of its own. Whatever could be read out of the file lives in its
 `DugContent` children (`content_list`), so that every piece of text is searchable and
@@ -93,9 +96,10 @@ content at all: a producer emits content only when the licence allows the text t
 incorporated (`can_include_content()` in `licenses.py`). A document is still a document
 when it has no content, whether because its text could not be read -- a scanned PDF, or a
 file the curator named that no parser handles -- or because its licence does not allow
-it: it is listed and linked to, and found by its title and description. Bulk data files
-(recordings, scans, spreadsheets of primary data) are not documents; a producer
-inventories them on the resource they came from.
+it: it is listed and linked to, and found by its title and description. Whether a producer
+emits a document for every file in a deposit, or only for the ones a person would read, is
+the producer's choice: the reference producer inventories data files (recordings, scans,
+spreadsheets of primary data) in the resource's `metadata` and emits no document for them.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -123,14 +127,16 @@ inventories them on the resource they came from.
 
 ## DugResource
 
-Something outside Dug that can be pointed to with a URL and a description.
+Anything outside Dug that has a URL, at whatever size.
 
-The main use is the repository deposit that a study's files came from, e.g. a Figshare
-article, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's
-title, `description` is its description, and `action` is its landing page. A resource
-with a DOI is citable. A single file within a deposit is a `DugDocument`, which shares the
-citation fields (`repository`, `authors`, `doi`, `license`) through `DugCitable` but is not
-a resource.
+A program website, a project's page on an NIH site, a press release, a Zenodo community,
+the Zenodo or Figshare deposit a study's files came from, a dataset with or without a DOI,
+a publication: each is a resource. `name` is its title, `description` its description,
+`action` its landing page; a resource with a DOI is citable. The dividing line from a
+`DugDocument` is format: a resource is the thing, a document is one file of it in one
+format. A deposit's README, a paper's PDF, a dataset's XLSX and the HTML of a press release
+are documents, which share the citation fields (`repository`, `authors`, `doi`, `license`)
+through `DugCitable` but are not resources.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|

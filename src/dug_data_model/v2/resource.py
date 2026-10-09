@@ -13,10 +13,15 @@ RESOURCE_KINDS: tuple[str, ...] = (
     "dataset",
     "software",
     "publication",
+    "preprint",
     "website",
     "other",
 )
 """Recommended values for `DugResource.resource_type`.
+
+A publication or preprint is a resource: the work, with its DOI, landing page and authors. The
+PDF or HTML of its full text is a `DugDocument` under it, with `document_type="article"`, so
+'publication' and 'preprint' are resource kinds and not document kinds.
 
 'document' is not one of them, and `DugResource` rejects it: a single file is a `DugDocument`,
 and a resource calling itself a document would be found by a filter on `resource_type` but not
@@ -44,14 +49,16 @@ that a filter on `repository` finds every deposit from the same place.
 
 
 class DugResource(DugCitable):
-    """Something outside Dug that can be pointed to with a URL and a description.
+    """Anything outside Dug that has a URL, at whatever size.
 
-    The main use is the repository deposit that a study's files came from, e.g. a Figshare
-    article, a Zenodo or Dataverse dataset, or an OpenNeuro dataset. `name` is the deposit's
-    title, `description` is its description, and `action` is its landing page. A resource
-    with a DOI is citable. A single file within a deposit is a `DugDocument`, which shares the
-    citation fields (`repository`, `authors`, `doi`, `license`) through `DugCitable` but is not
-    a resource.
+    A program website, a project's page on an NIH site, a press release, a Zenodo community,
+    the Zenodo or Figshare deposit a study's files came from, a dataset with or without a DOI,
+    a publication: each is a resource. `name` is its title, `description` its description,
+    `action` its landing page; a resource with a DOI is citable. The dividing line from a
+    `DugDocument` is format: a resource is the thing, a document is one file of it in one
+    format. A deposit's README, a paper's PDF, a dataset's XLSX and the HTML of a press release
+    are documents, which share the citation fields (`repository`, `authors`, `doi`, `license`)
+    through `DugCitable` but are not resources.
     """
 
     type: Literal["resource"] = RESOURCE_TYPE

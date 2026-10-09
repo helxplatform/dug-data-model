@@ -140,6 +140,11 @@ class TestDugDocument:
         d = DugDocument(id="d1", name="Doc", description="", document_type="lab_notebook")
         assert d.document_type == "lab_notebook"
 
+    def test_a_publication_is_a_resource_and_its_full_text_an_article(self):
+        assert "article" in DOCUMENT_KINDS and "data" in DOCUMENT_KINDS
+        assert not {"publication", "preprint"} & set(DOCUMENT_KINDS)
+        assert {"publication", "preprint"} <= set(RESOURCE_KINDS)
+
     def test_get_searchable_dict(self):
         d = DugDocument(
             id="d1", name="README", description="", file_name="README.pdf",
