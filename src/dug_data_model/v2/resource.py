@@ -59,6 +59,11 @@ class DugResource(DugCitable):
     format. A deposit's README, a paper's PDF, a dataset's XLSX and the HTML of a press release
     are documents, which share the citation fields (`repository`, `authors`, `doi`, `license`)
     through `DugCitable` but are not resources.
+
+    A resource's parent is its study or, for a deposit in a Zenodo community or a page on a
+    website, the enclosing resource (`parent_type="resource"`), which lists it in its
+    `resource_list`. The study's own `resource_list` lists every resource in the study either
+    way, so a consumer that starts from the study never has to climb.
     """
 
     type: Literal["resource"] = RESOURCE_TYPE
@@ -68,6 +73,10 @@ class DugResource(DugCitable):
     )
     document_list: Annotated[list[str], References("document", children=True)] = Field(
         default_factory=list, description="IDs of the DugDocuments that came from this resource."
+    )
+    resource_list: Annotated[list[str], References("resource", children=True)] = Field(
+        default_factory=list,
+        description="IDs of the DugResources inside this one, e.g. the deposits in a community.",
     )
 
     @field_validator("resource_type")
@@ -83,4 +92,5 @@ class DugResource(DugCitable):
             **es_elem,
             "resource_type": self.resource_type,
             "document_list": self.document_list,
+            "resource_list": self.resource_list,
         }

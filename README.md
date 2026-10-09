@@ -172,13 +172,16 @@ study = DugStudy(
 ```
 
 An element has a single `parent_type`, so a document's parent is either its resource or,
-when it did not come from a known resource, its study. `DugStudy.document_list` lists every
-document in the study either way. `validate_references()` checks that all of these IDs
-resolve within a collection, that each points at the right type of element (a `content_list`
-names content, a `parents` entry has the element's `parent_type`), and that a document's
-`content_list` and a resource's `document_list` agree with their children's `parents`.
-`DugStudy.document_list` is not held to that last rule, since it also lists documents whose
-parent is a resource.
+when it did not come from a known resource, its study. A resource's parent is likewise either
+its study or an enclosing resource: a Zenodo community holds deposits, a project website holds
+a press release page, and each inner resource names the outer one in `parents` with
+`parent_type="resource"` and is listed in the outer one's `resource_list`. `DugStudy.document_list`
+and `DugStudy.resource_list` list every document and every resource in the study either way.
+`validate_references()` checks that all of these IDs resolve within a collection, that each
+points at the right type of element (a `content_list` names content, a `parents` entry has the
+element's `parent_type`), and that a document's `content_list` and a resource's `document_list`
+and `resource_list` agree with their children's `parents`. The study's two lists are not held
+to that last rule, since they also list elements whose parent is a resource.
 
 Going the other way, from a piece of content up to its study, follows `parents` through the
 document and then the resource: three hops, or two when the document hangs off the study
@@ -217,7 +220,8 @@ recorded so that a second producer, or a UI, does not have to reinvent or guess 
 not schema: nothing here is validated.
 
 - **IDs.** A resource is `<study>/resources/<url-slug>` (the URL's host and path, lower-cased,
-  non-alphanumerics collapsed to `-`); a document is `<study>/assets/<path under assets/>`; a
+  non-alphanumerics collapsed to `-`), or `<parent resource>/<url-slug>` when it is inside
+  another resource; a document is `<study>/assets/<path under assets/>`; a
   content element is `<document>/<heading-slug>`, with `_2`, `_3` on repeated headings and
   `section-N` (N = 1-based position) when a heading has nothing sluggable in it.
 - **`action`.** A resource links to its landing page. A document links to an explicit curated

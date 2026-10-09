@@ -138,6 +138,11 @@ format. A deposit's README, a paper's PDF, a dataset's XLSX and the HTML of a pr
 are documents, which share the citation fields (`repository`, `authors`, `doi`, `license`)
 through `DugCitable` but are not resources.
 
+A resource's parent is its study or, for a deposit in a Zenodo community or a page on a
+website, the enclosing resource (`parent_type="resource"`), which lists it in its
+`resource_list`. The study's own `resource_list` lists every resource in the study either
+way, so a consumer that starts from the study never has to climb.
+
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
 | `id` | `str` | Yes | - |  |
@@ -159,6 +164,7 @@ through `DugCitable` but are not resources.
 | `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. |
 | `resource_type` | `str` | No | `"dataset"` | Kind of resource; recommended values are listed in RESOURCE_KINDS. |
 | `document_list` | `list[str]` | No | - | IDs of the DugDocuments that came from this resource. |
+| `resource_list` | `list[str]` | No | - | IDs of the DugResources inside this one, e.g. the deposits in a community. |
 
 ## DugSection
 

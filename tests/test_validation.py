@@ -168,6 +168,19 @@ class TestInconsistentReferences:
             "r1: document_list lists d1, whose parents do not include it",
         ]
 
+    def test_a_resource_inside_a_resource(self):
+        study = DugStudy(id="s1", name="S", description="", resource_list=["community", "deposit"])
+        community = DugResource(id="community", name="Lab's Zenodo community", description="",
+                                resource_type="website", resource_list=["deposit"],
+                                parents=["s1"], parent_type="study")
+        deposit = DugResource(id="deposit", name="Deposit", description="",
+                              parents=["community"], parent_type="resource")
+        assert find_inconsistent_references([study, community, deposit]) == []
+        community.resource_list = []
+        assert find_inconsistent_references([study, community, deposit]) == [
+            "deposit: names community as a parent, but its resource_list does not list it"
+        ]
+
     def test_a_child_its_parent_does_not_list(self):
         study, document, content = _document_tree()
         document.content_list = []

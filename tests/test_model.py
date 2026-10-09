@@ -244,6 +244,7 @@ class TestDugResource:
         assert es["doi"] == "10.5281/zenodo.1"
         assert es["license"] == "CC0-1.0"
         assert es["document_list"] == ["d1"]
+        assert es["resource_list"] == []
         assert es["action"] == "https://zenodo.org/records/1"
 
 

@@ -379,7 +379,7 @@
       "type": "object"
     },
     "DugResource": {
-      "description": "Anything outside Dug that has a URL, at whatever size.\n\nA program website, a project's page on an NIH site, a press release, a Zenodo community,\nthe Zenodo or Figshare deposit a study's files came from, a dataset with or without a DOI,\na publication: each is a resource. `name` is its title, `description` its description,\n`action` its landing page; a resource with a DOI is citable. The dividing line from a\n`DugDocument` is format: a resource is the thing, a document is one file of it in one\nformat. A deposit's README, a paper's PDF, a dataset's XLSX and the HTML of a press release\nare documents, which share the citation fields (`repository`, `authors`, `doi`, `license`)\nthrough `DugCitable` but are not resources.",
+      "description": "Anything outside Dug that has a URL, at whatever size.\n\nA program website, a project's page on an NIH site, a press release, a Zenodo community,\nthe Zenodo or Figshare deposit a study's files came from, a dataset with or without a DOI,\na publication: each is a resource. `name` is its title, `description` its description,\n`action` its landing page; a resource with a DOI is citable. The dividing line from a\n`DugDocument` is format: a resource is the thing, a document is one file of it in one\nformat. A deposit's README, a paper's PDF, a dataset's XLSX and the HTML of a press release\nare documents, which share the citation fields (`repository`, `authors`, `doi`, `license`)\nthrough `DugCitable` but are not resources.\n\nA resource's parent is its study or, for a deposit in a Zenodo community or a page on a\nwebsite, the enclosing resource (`parent_type=\"resource\"`), which lists it in its\n`resource_list`. The study's own `resource_list` lists every resource in the study either\nway, so a consumer that starts from the study never has to climb.",
       "properties": {
         "id": {
           "title": "Id",
@@ -497,6 +497,14 @@
             "type": "string"
           },
           "title": "Document List",
+          "type": "array"
+        },
+        "resource_list": {
+          "description": "IDs of the DugResources inside this one, e.g. the deposits in a community.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Resource List",
           "type": "array"
         }
       },
