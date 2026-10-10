@@ -9,10 +9,8 @@ from dug_data_model.v2 import (
     DugVariable,
     DugStudy,
     DugSection,
-    DugDocument,
     DugContent,
     DugResource,
-    DugCitable,
     DugElementParsedList,
     load_elements,
     serialize_elements,
@@ -20,9 +18,7 @@ from dug_data_model.v2 import (
     STUDY_TYPE,
     CONCEPT_TYPE,
     SECTION_TYPE,
-    DOCUMENT_TYPE,
     CONTENT_TYPE,
-    DOCUMENT_KINDS,
     RESOURCE_TYPE,
     RESOURCE_KINDS,
     REPOSITORY_KINDS,
@@ -72,7 +68,7 @@ class TestDugStudy:
         assert "section_list" in d
 
     def test_lists_no_publications_resources_or_documents(self):
-        # Its resources and documents name it in `parents`; see the docstring for why.
+        # Its resources name it in `parents`; see the docstring for why.
         dropped = {"publications", "document_list", "resource_list"}
         assert not dropped & set(DugStudy.model_fields)
         s = DugStudy.model_validate({"id": "s1", "name": "Study", "description": "",
@@ -112,60 +108,6 @@ class TestDugSection:
         assert d["variable_list"] == ["v1", "v2"]
 
 
-class TestDugDocument:
-    def test_default_type(self):
-        d = DugDocument(id="d1", name="README", description="")
-        assert d.type == DOCUMENT_TYPE
-
-    def test_holds_no_text(self):
-        assert "content" not in DugDocument.model_fields
-
-    def test_shares_the_citation_fields_but_is_not_a_resource(self):
-        d = DugDocument(id="d1", name="README", description="", repository="zenodo",
-                        license="CC-BY-4.0", doi="10.1234/abc")
-        assert isinstance(d, DugCitable)
-        assert not isinstance(d, DugResource)
-        assert d.repository == "zenodo"
-        assert "resource_type" not in DugDocument.model_fields
-
-    def test_resources_by_class_are_not_documents(self):
-        elements = DugElementParsedList.validate_python([
-            {"id": "r1", "name": "Deposit", "description": "", "type": "resource"},
-            {"id": "d1", "name": "README", "description": "", "type": "document"},
-        ])
-        assert [e.id for e in elements if isinstance(e, DugResource)] == ["r1"]
-        assert [e.id for e in elements if isinstance(e, DugCitable)] == ["r1", "d1"]
-
-    def test_recommended_kinds_are_not_enforced(self):
-        assert "readme" in DOCUMENT_KINDS
-        d = DugDocument(id="d1", name="Doc", description="", document_type="lab_notebook")
-        assert d.document_type == "lab_notebook"
-
-    def test_a_publication_is_a_resource_and_its_full_text_an_article(self):
-        assert "article" in DOCUMENT_KINDS and "data" in DOCUMENT_KINDS
-        assert not {"publication", "preprint"} & set(DOCUMENT_KINDS)
-        assert {"publication", "preprint"} <= set(RESOURCE_KINDS)
-
-    def test_get_searchable_dict(self):
-        d = DugDocument(
-            id="d1", name="README", description="", file_name="README.pdf",
-            mime_type="application/pdf", document_type="readme", authors=["A. Author"],
-            doi="10.1234/abc", license="CC-BY-4.0", studies=["s1"],
-        )
-        es = d.get_searchable_dict()
-        assert es["element_type"] == "document"
-        assert es["studies"] == ["s1"]
-        assert "resource_type" not in es
-        assert es["file_name"] == "README.pdf"
-        assert es["mime_type"] == "application/pdf"
-        assert es["document_type"] == "readme"
-        assert es["authors"] == ["A. Author"]
-        assert es["doi"] == "10.1234/abc"
-        assert es["license"] == "CC-BY-4.0"
-        assert "content" not in es
-        assert "content_list" not in es
-
-
 class TestDugContent:
     def test_default_type(self):
         c = DugContent(id="d1/intro", name="Intro", description="", content="Text")
@@ -179,6 +121,14 @@ class TestDugContent:
     def test_has_no_display_flag_or_licence_of_its_own(self):
         assert "can_display_content" not in DugContent.model_fields
         assert "license" not in DugContent.model_fields
+
+    def test_its_parent_is_a_resource(self):
+        DugContent(id="r/h", name="H", description="", content="t", parents=["r"],
+                   parent_type="resource")
+        DugContent(id="r/h", name="H", description="", content="t")  # no parent yet
+        with pytest.raises(ValidationError, match="parent_type is 'resource'"):
+            DugContent(id="r/h", name="H", description="", content="t", parents=["d"],
+                       parent_type="document")
 
     @pytest.mark.parametrize("name, content, expected", [
         ("Methods", "We did things.", "Methods: We did things."),
@@ -217,16 +167,47 @@ class TestDugResource:
         r = DugResource(id="r1", name="Dataset", description="A dataset")
         assert r.type == RESOURCE_TYPE
 
-    def test_is_a_dataset_by_default(self):
+    def test_kind_is_unknown_by_default(self):
+        # "dataset" was the default when every resource was a deposit; a file would be
+        # mis-typed by it, so an unset kind is now empty, and compact_dump() leaves it out.
         r = DugResource(id="r1", name="Dataset", description="A dataset")
-        assert r.resource_type == "dataset"
+        assert r.resource_type == ""
         assert "dataset" in RESOURCE_KINDS
 
-    @pytest.mark.parametrize("resource_type", ["document", " Document "])
-    def test_a_resource_cannot_call_itself_a_document(self, resource_type):
+    def test_recommended_kinds_are_not_enforced(self):
+        assert "readme" in RESOURCE_KINDS
+        r = DugResource(id="r1", name="Notebook", description="", resource_type="lab_notebook")
+        assert r.resource_type == "lab_notebook"
+
+    def test_a_file_is_a_resource_with_a_format(self):
+        page = DugResource(id="r1", name="Deposit", description="", resource_type="dataset")
+        pdf = DugResource(id="r1/readme", name="README", description="", resource_type="readme",
+                          file_name="README.pdf", mime_type="application/pdf",
+                          parents=["r1"], parent_type="resource")
+        assert page.file_name == page.mime_type == ""
+        assert type(page) is type(pdf) is DugResource
+        assert "content" not in DugResource.model_fields
+
+    def test_a_files_kind_matches_its_parents_when_it_is_the_whole_thing(self):
+        # The convention that replaces an is_full_text flag and the old 'article' kind.
+        assert "article" not in RESOURCE_KINDS
+        assert {"publication", "preprint", "supplementary_table", "readme"} <= set(RESOURCE_KINDS)
+        paper = DugResource(id="p", name="Paper", description="", resource_type="publication",
+                            doi="10.1234/abc", parents=["s1"], parent_type="study")
+        full_text = DugResource(id="p/pdf", name="Paper (PDF)", description="",
+                                resource_type="publication", mime_type="application/pdf",
+                                parents=["p"], parent_type="resource")
+        table = DugResource(id="p/s1", name="Table S1", description="",
+                            resource_type="supplementary_table", mime_type="text/csv",
+                            parents=["p"], parent_type="resource")
+        assert full_text.resource_type == paper.resource_type != table.resource_type
+
+    def test_a_document_is_no_longer_a_type(self):
         assert "document" not in RESOURCE_KINDS
-        with pytest.raises(ValidationError, match="DugDocument"):
-            DugResource(id="r1", name="README", description="", resource_type=resource_type)
+        with pytest.raises(ValidationError):
+            DugElementParsedList.validate_python(
+                [{"id": "d1", "name": "README", "description": "", "type": "document"}]
+            )
 
     def test_repository_slugs_are_recommended_not_enforced(self):
         assert "zenodo" in REPOSITORY_KINDS
@@ -235,19 +216,22 @@ class TestDugResource:
 
     def test_get_searchable_dict(self):
         r = DugResource(
-            id="r1", name="Dataset", description="A dataset", repository="zenodo",
-            authors=["A. Author"], doi="10.5281/zenodo.1", license="CC0-1.0",
+            id="r1", name="Dataset", description="A dataset", resource_type="dataset",
+            repository="zenodo", authors=["A. Author"], doi="10.5281/zenodo.1",
+            license="CC0-1.0", file_name="data.zip", mime_type="application/zip",
             action="https://zenodo.org/records/1", studies=["s1"],
         )
         es = r.get_searchable_dict()
         assert es["element_type"] == "resource"
-        assert es["studies"] == ["s1"]
         assert es["resource_type"] == "dataset"
         assert es["repository"] == "zenodo"
         assert es["authors"] == ["A. Author"]
         assert es["doi"] == "10.5281/zenodo.1"
         assert es["license"] == "CC0-1.0"
-        assert not {"document_list", "resource_list"} & set(es)
+        assert es["file_name"] == "data.zip"
+        assert es["mime_type"] == "application/zip"
+        assert es["studies"] == ["s1"]
+        assert not {"document_list", "resource_list", "content"} & set(es)
         assert es["action"] == "https://zenodo.org/records/1"
 
 
@@ -328,20 +312,15 @@ class TestDugElementParsedList:
             {"id": "v1", "name": "var1", "description": "desc", "type": "variable"},
             {"id": "c1", "name": "concept1", "description": "desc", "type": "concept"},
             {"id": "sec1", "name": "section1", "description": "desc", "type": "section"},
-            {"id": "d1", "name": "document1", "description": "desc", "type": "document"},
-            {"id": "d1/s", "name": "heading", "description": "", "content": "text",
-             "type": "content"},
             {"id": "r1", "name": "resource1", "description": "desc", "type": "resource"},
+            {"id": "r1/s", "name": "heading", "description": "", "content": "text",
+             "type": "content"},
         ]
         elements = DugElementParsedList.validate_python(data)
         types = {e.type for e in elements}
-        assert types == {
-            "study", "variable", "concept", "section", "document", "content", "resource",
-        }
-        assert type(elements[4]) is DugDocument
+        assert types == {"study", "variable", "concept", "section", "resource", "content"}
+        assert type(elements[4]) is DugResource
         assert isinstance(elements[5], DugContent)
-        # Documents and resources share DugCitable, but each loads as its own class.
-        assert type(elements[6]) is DugResource
 
     def test_wrong_type_raises(self):
         data = [{"id": "x", "name": "x", "description": "x", "type": "unknown"}]
@@ -371,20 +350,23 @@ class TestDugElementParsedList:
         assert restored[1].id == "s1"
         assert restored[1].abstract == "text"
 
-    def test_roundtrip_document_hierarchy(self, tmp_path):
+    def test_roundtrip_resource_tree(self, tmp_path):
         original = [
             DugResource(id="r1", name="Dataset", description="desc", doi="10.1/x",
-                        parents=["s1"], parent_type="study"),
-            DugDocument(id="d1", name="README", description="", mime_type="application/pdf",
-                        parents=["r1"], parent_type="resource"),
-            DugContent(id="d1/intro", name="Intro", description="", content="Text",
-                       position=0, page=1, parents=["d1"], parent_type="document"),
+                        resource_type="dataset", parents=["s1"], parent_type="study",
+                        studies=["s1"]),
+            DugResource(id="r1/readme", name="README", description="", resource_type="readme",
+                        mime_type="application/pdf", parents=["r1"], parent_type="resource",
+                        studies=["s1"]),
+            DugContent(id="r1/readme/intro", name="Intro", description="", content="Text",
+                       position=0, page=1, parents=["r1/readme"], parent_type="resource",
+                       studies=["s1"]),
         ]
         path = tmp_path / "out.json"
         serialize_elements(original, path)
         restored = load_elements(path, DugElementParsedList)
         assert restored == original
-        assert [type(e) for e in restored] == [DugResource, DugDocument, DugContent]
+        assert [type(e) for e in restored] == [DugResource, DugResource, DugContent]
 
 
 class TestCanIncludeContent:

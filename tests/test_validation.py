@@ -7,7 +7,6 @@ from pydantic import Field
 
 from dug_data_model.v2 import (
     DugElement,
-    DugDocument,
     DugContent,
     DugStudy,
     DugVariable,
@@ -80,11 +79,13 @@ class TestValidateUniqueIds:
 # ---------------------------------------------------------------------------
 
 def _document_tree():
+    """A study, a file that hangs off it directly, and a piece of the file's text."""
     return [
         DugStudy(id="s1", name="Study", description="desc"),
-        DugDocument(id="d1", name="Doc", description="", parents=["s1"], parent_type="study"),
+        DugResource(id="d1", name="Doc", description="", mime_type="application/pdf",
+                    parents=["s1"], parent_type="study"),
         DugContent(id="d1/a", name="A", description="", content="text",
-                   parents=["d1"], parent_type="document"),
+                   parents=["d1"], parent_type="resource"),
     ]
 
 
@@ -134,10 +135,11 @@ class TestReferences:
 
 
 def _resource_tree():
+    """A study, a deposit, and a file in the deposit."""
     return [
         DugStudy(id="s1", name="Study", description="desc"),
         DugResource(id="r1", name="Deposit", description="", parents=["s1"], parent_type="study"),
-        DugDocument(id="d1", name="Doc", description="", parents=["r1"], parent_type="resource"),
+        DugResource(id="d1", name="Doc", description="", parents=["r1"], parent_type="resource"),
     ]
 
 
@@ -157,14 +159,14 @@ class TestInconsistentReferences:
         study, document, content = _document_tree()
         content.parents = ["s1"]
         problems = find_inconsistent_references([study, document, content])
-        assert "d1/a: parents names s1, a study, not a document" in problems
+        assert "d1/a: parents names s1, a study, not a resource" in problems
 
     def test_studies_must_name_studies(self):
         # `studies` is checked like any reference list: the ID must resolve to a study.
         study, document, content = _document_tree()
         content.studies = ["s1", "d1"]
         assert find_inconsistent_references([study, document, content]) == [
-            "d1/a: studies names d1, a document, not a study",
+            "d1/a: studies names d1, a resource, not a study",
         ]
 
     def test_a_study_named_in_studies_need_not_list_the_element(self):
@@ -189,7 +191,7 @@ class TestInconsistentReferences:
 
     def test_nothing_lists_its_children(self):
         # A child names its parent; the parent has no list to keep in step with it.
-        for cls in (DugStudy, DugResource, DugDocument):
+        for cls in (DugStudy, DugResource):
             assert not {"document_list", "resource_list", "content_list"} & set(cls.model_fields)
 
     def test_lists_that_are_not_children_need_not_agree(self):
@@ -206,7 +208,7 @@ class TestInconsistentReferences:
         with pytest.raises(InconsistentReferenceError) as exc_info:
             validate_references([study, document, content])
         assert exc_info.value.problems == [
-            "d1/a: parents names s1, a study, not a document",
+            "d1/a: parents names s1, a study, not a resource",
         ]
 
 
