@@ -72,7 +72,7 @@ def compact_dump(element: DugElement) -> dict[str, Any]:
     default and that default is empty (`""`, `[]`, `{}` or `None`), as is the computed
     `ml_ready_desc`, which repeats the description. Loading the result through
     `DugElementParsedList` restores every omitted field. A field whose default says
-    something -- `position=0`, `resource_type="dataset"`, `type` -- is
+    something -- `position=0`, `data_type="text"`, `type` -- is
     always written, so that a file keeps its meaning if a later model changes that default.
     (`exclude_defaults=True` was tried first and dropped those too.) `id`, `type` and `name`
     come first so the file scans top-down. `ml_ready_desc` is also left out of the concepts in `concepts`,
