@@ -152,9 +152,11 @@ class TestDugDocument:
             id="d1", name="README", description="", file_name="README.pdf",
             mime_type="application/pdf", document_type="readme", authors=["A. Author"],
             doi="10.1234/abc", license="CC-BY-4.0", content_list=["d1/intro"],
+            studies=["s1"],
         )
         es = d.get_searchable_dict()
         assert es["element_type"] == "document"
+        assert es["studies"] == ["s1"]
         assert "resource_type" not in es
         assert es["file_name"] == "README.pdf"
         assert es["mime_type"] == "application/pdf"
@@ -199,9 +201,10 @@ class TestDugContent:
 
     def test_searchable_and_response_dicts_carry_the_text(self):
         c = DugContent(id="d1/intro", name="Intro", description="", content="Text",
-                       position=2, level=1, page=3)
+                       position=2, level=1, page=3, studies=["s1"])
         es = c.get_searchable_dict()
         assert es["element_type"] == "content"
+        assert es["studies"] == ["s1"]
         assert es["position"] == 2
         assert es["level"] == 1
         assert es["page"] == 3
@@ -236,10 +239,11 @@ class TestDugResource:
         r = DugResource(
             id="r1", name="Dataset", description="A dataset", repository="zenodo",
             authors=["A. Author"], doi="10.5281/zenodo.1", license="CC0-1.0",
-            document_list=["d1"], action="https://zenodo.org/records/1",
+            document_list=["d1"], action="https://zenodo.org/records/1", studies=["s1"],
         )
         es = r.get_searchable_dict()
         assert es["element_type"] == "resource"
+        assert es["studies"] == ["s1"]
         assert es["resource_type"] == "dataset"
         assert es["repository"] == "zenodo"
         assert es["authors"] == ["A. Author"]

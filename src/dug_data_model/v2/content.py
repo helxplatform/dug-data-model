@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Literal, override
+from typing import Annotated, Any, Literal, override
 
 from pydantic import Field, computed_field
 
-from .base import DugElement
+from .base import DugElement, References
 
 CONTENT_TYPE = "content"
 
@@ -18,7 +18,8 @@ class DugContent(DugElement):
     single one when there are no headings). `name` is the heading and `content` is the text
     under it. `description` is metadata about the piece, as on every other element, and is
     usually empty. `parents` holds the ID of the containing document, with `parent_type` set
-    to 'document'.
+    to 'document'; `studies` holds the ID of the study, as on `DugCitable`, so that the study
+    can be found without climbing through the document.
 
     Content carries no licence or display flag of its own: the licence is stated once, on the
     document, and content exists only when that licence permits it (see `licenses.py`). A
@@ -41,6 +42,10 @@ class DugContent(DugElement):
             "held in `description` fails to load instead of loading with no text."
         )
     )
+    studies: Annotated[list[str], References("study")] = Field(
+        default_factory=list,
+        description="IDs of the studies this content belongs to, as on DugCitable.",
+    )
 
     @override
     @computed_field
@@ -59,4 +64,5 @@ class DugContent(DugElement):
             "level": self.level,
             "page": self.page,
             "content": self.content,
+            "studies": self.studies,
         }

@@ -106,7 +106,7 @@
       "type": "object"
     },
     "DugContent": {
-      "description": "A piece of a `DugDocument`'s text: a heading and the body under it.\n\nContent is the only element that holds a document's text. A `DugDocument` describes and\nlinks to a file; if the file's text can be read, and the document's licence allows the\ntext to be incorporated, it is split into DugContent children, one per heading (or a\nsingle one when there are no headings). `name` is the heading and `content` is the text\nunder it. `description` is metadata about the piece, as on every other element, and is\nusually empty. `parents` holds the ID of the containing document, with `parent_type` set\nto 'document'.\n\nContent carries no licence or display flag of its own: the licence is stated once, on the\ndocument, and content exists only when that licence permits it (see `licenses.py`). A\ndocument whose text may not be incorporated has no content, so the case shows in the\nshape of the data rather than in a flag that an index or a UI has to remember to honour.",
+      "description": "A piece of a `DugDocument`'s text: a heading and the body under it.\n\nContent is the only element that holds a document's text. A `DugDocument` describes and\nlinks to a file; if the file's text can be read, and the document's licence allows the\ntext to be incorporated, it is split into DugContent children, one per heading (or a\nsingle one when there are no headings). `name` is the heading and `content` is the text\nunder it. `description` is metadata about the piece, as on every other element, and is\nusually empty. `parents` holds the ID of the containing document, with `parent_type` set\nto 'document'; `studies` holds the ID of the study, as on `DugCitable`, so that the study\ncan be found without climbing through the document.\n\nContent carries no licence or display flag of its own: the licence is stated once, on the\ndocument, and content exists only when that licence permits it (see `licenses.py`). A\ndocument whose text may not be incorporated has no content, so the case shows in the\nshape of the data rather than in a flag that an index or a UI has to remember to honour.",
       "properties": {
         "id": {
           "title": "Id",
@@ -225,6 +225,14 @@
           "description": "The text under the heading. Required, so that a file written when the text was held in `description` fails to load instead of loading with no text.",
           "title": "Content",
           "type": "string"
+        },
+        "studies": {
+          "description": "IDs of the studies this content belongs to, as on DugCitable.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Studies",
+          "type": "array"
         }
       },
       "required": [
@@ -342,6 +350,14 @@
           "description": "SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown.",
           "title": "License",
           "type": "string"
+        },
+        "studies": {
+          "description": "IDs of the studies this item belongs to, at any depth below them; `parents` names only the element directly above.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Studies",
+          "type": "array"
         },
         "file_name": {
           "default": "",
@@ -484,6 +500,14 @@
           "description": "SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown.",
           "title": "License",
           "type": "string"
+        },
+        "studies": {
+          "description": "IDs of the studies this item belongs to, at any depth below them; `parents` names only the element directly above.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Studies",
+          "type": "array"
         },
         "resource_type": {
           "default": "dataset",

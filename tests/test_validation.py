@@ -102,6 +102,11 @@ class TestReferences:
         elements = _document_tree()[:2]  # drop the content
         assert find_missing_references(elements) == {"content_list": {"d1/a"}}
 
+    def test_missing_study_named_in_studies(self):
+        study, document, content = _document_tree()
+        content.studies = ["s1", "s2"]
+        assert find_missing_references([study, document, content]) == {"studies": {"s2"}}
+
     def test_validate_raises_with_all_missing_ids(self):
         elements = [_document_tree()[1]]
         with pytest.raises(MissingReferenceError) as exc_info:
@@ -154,6 +159,21 @@ class TestInconsistentReferences:
         content.parents = ["s1"]
         problems = find_inconsistent_references([study, document, content])
         assert "d1/a: parents names s1, a study, not a document" in problems
+
+    def test_studies_must_name_studies(self):
+        # `studies` is checked like any reference list: the ID must resolve to a study.
+        study, document, content = _document_tree()
+        content.studies = ["s1", "d1"]
+        assert find_inconsistent_references([study, document, content]) == [
+            "d1/a: studies names d1, a document, not a study",
+        ]
+
+    def test_a_study_named_in_studies_need_not_list_the_element(self):
+        # `studies` is a shortcut up the tree, not a parent link, so the study has nothing
+        # to agree with: a study lists none of its resources, documents or content.
+        study, document, content = _document_tree()
+        document.studies = content.studies = ["s1"]
+        validate_references([study, document, content])
 
     def test_parent_type_left_empty_is_not_checked(self):
         study = DugStudy(id="s1", name="Study", description="desc")

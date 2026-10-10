@@ -48,7 +48,8 @@ text to be incorporated, it is split into DugContent children, one per heading (
 single one when there are no headings). `name` is the heading and `content` is the text
 under it. `description` is metadata about the piece, as on every other element, and is
 usually empty. `parents` holds the ID of the containing document, with `parent_type` set
-to 'document'.
+to 'document'; `studies` holds the ID of the study, as on `DugCitable`, so that the study
+can be found without climbing through the document.
 
 Content carries no licence or display flag of its own: the licence is stated once, on the
 document, and content exists only when that licence permits it (see `licenses.py`). A
@@ -74,6 +75,7 @@ shape of the data rather than in a flag that an index or a UI has to remember to
 | `level` | `int` | No | `None` | Heading depth (1 = top level) when the source format exposes it. |
 | `page` | `int` | No | `None` | 1-based page this content starts on, for paginated formats. |
 | `content` | `str` | Yes | - | The text under the heading. Required, so that a file written when the text was held in `description` fails to load instead of loading with no text. |
+| `studies` | `list[str]` | No | - | IDs of the studies this content belongs to, as on DugCitable. |
 
 ## DugDocument
 
@@ -120,6 +122,7 @@ spreadsheets of primary data) in the resource's `metadata` and emits no document
 | `authors` | `list[str]` | No | - | Author names in citation order. |
 | `doi` | `str` | No | `""` | Bare DOI of this item, without a resolver prefix; empty when unknown. |
 | `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. |
+| `studies` | `list[str]` | No | - | IDs of the studies this item belongs to, at any depth below them; `parents` names only the element directly above. |
 | `file_name` | `str` | No | `""` | Original file name, e.g. 'README.pdf'. |
 | `mime_type` | `str` | No | `""` | IANA media type, e.g. 'application/pdf'. |
 | `document_type` | `str` | No | `""` | Kind of document; recommended values are listed in DOCUMENT_KINDS. |
@@ -162,6 +165,7 @@ way, so a consumer that starts from the study never has to climb.
 | `authors` | `list[str]` | No | - | Author names in citation order. |
 | `doi` | `str` | No | `""` | Bare DOI of this item, without a resolver prefix; empty when unknown. |
 | `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. |
+| `studies` | `list[str]` | No | - | IDs of the studies this item belongs to, at any depth below them; `parents` names only the element directly above. |
 | `resource_type` | `str` | No | `"dataset"` | Kind of resource; recommended values are listed in RESOURCE_KINDS. |
 | `document_list` | `list[str]` | No | - | IDs of the DugDocuments that came from this resource. |
 | `resource_list` | `list[str]` | No | - | IDs of the DugResources inside this one, e.g. the deposits in a community. |
