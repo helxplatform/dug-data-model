@@ -65,8 +65,6 @@ class TestRealOutput:
             resource = get_element_by_id(elements, document.parents[0])
             assert type(resource) is DugResource and document.parent_type == "resource"
             assert resource.parents == [study.id] and resource.parent_type == "study"
-            assert content.id in document.content_list
-            assert document.id in resource.document_list
 
     def test_content_holds_text_under_a_licence_that_allows_it(self, elements):
         for content in filter_by_type(elements, CONTENT_TYPE):

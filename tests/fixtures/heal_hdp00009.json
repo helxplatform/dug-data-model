@@ -49,10 +49,7 @@
     ],
     "doi": "10.6084/m9.figshare.24867198",
     "license": "CC-BY-4.0",
-    "resource_type": "dataset",
-    "document_list": [
-      "HDP00009/assets/24867198/README.pdf"
-    ]
+    "resource_type": "dataset"
   },
   {
     "id": "HDP00009/resources/doi-org-10-6084-m9-figshare-25036019",
@@ -87,10 +84,7 @@
     ],
     "doi": "10.6084/m9.figshare.25036019",
     "license": "CC-BY-4.0",
-    "resource_type": "dataset",
-    "document_list": [
-      "HDP00009/assets/25036019/README.pdf"
-    ]
+    "resource_type": "dataset"
   },
   {
     "id": "HDP00009/assets/24867198/README.pdf",
@@ -114,10 +108,7 @@
     "license": "CC-BY-4.0",
     "file_name": "README.pdf",
     "mime_type": "application/pdf",
-    "document_type": "readme",
-    "content_list": [
-      "HDP00009/assets/24867198/README.pdf/readmepdf"
-    ]
+    "document_type": "readme"
   },
   {
     "id": "HDP00009/assets/24867198/README.pdf/readmepdf",
@@ -153,10 +144,7 @@
     "license": "CC-BY-4.0",
     "file_name": "README.pdf",
     "mime_type": "application/pdf",
-    "document_type": "readme",
-    "content_list": [
-      "HDP00009/assets/25036019/README.pdf/readmepdf"
-    ]
+    "document_type": "readme"
   },
   {
     "id": "HDP00009/assets/25036019/README.pdf/readmepdf",

@@ -92,7 +92,8 @@ not a resource: `isinstance(x, DugResource)` is false for it, so code that picks
 deposits by class does not pick up their files too.
 
 A document holds no text of its own. Whatever could be read out of the file lives in its
-`DugContent` children (`content_list`), so that every piece of text is searchable and
+`DugContent` children, which name it in `parents` and order themselves by `position`
+(the document does not list them), so that every piece of text is searchable and
 annotatable in the same way. The document's `license` decides whether there is any
 content at all: a producer emits content only when the licence allows the text to be
 incorporated (`can_include_content()` in `licenses.py`). A document is still a document
@@ -126,7 +127,6 @@ spreadsheets of primary data) in the resource's `metadata` and emits no document
 | `file_name` | `str` | No | `""` | Original file name, e.g. 'README.pdf'. |
 | `mime_type` | `str` | No | `""` | IANA media type, e.g. 'application/pdf'. |
 | `document_type` | `str` | No | `""` | Kind of document; recommended values are listed in DOCUMENT_KINDS. |
-| `content_list` | `list[str]` | No | - | IDs of this document's DugContent, in reading order. |
 
 ## DugResource
 
@@ -142,9 +142,11 @@ are documents, which share the citation fields (`repository`, `authors`, `doi`, 
 through `DugCitable` but are not resources.
 
 A resource's parent is its study or, for a deposit in a Zenodo community or a page on a
-website, the enclosing resource (`parent_type="resource"`), which lists it in its
-`resource_list`. The study's own `resource_list` lists every resource in the study either
-way, so a consumer that starts from the study never has to climb.
+website, the enclosing resource (`parent_type="resource"`). A resource lists neither its
+documents nor the resources inside it: they name it in `parents`, as resources name the
+study, and `studies` takes a consumer straight to the study from any depth. Earlier
+versions had `document_list` and `resource_list`; a file that still carries them loads
+without them.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -167,8 +169,6 @@ way, so a consumer that starts from the study never has to climb.
 | `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. |
 | `studies` | `list[str]` | No | - | IDs of the studies this item belongs to, at any depth below them; `parents` names only the element directly above. |
 | `resource_type` | `str` | No | `"dataset"` | Kind of resource; recommended values are listed in RESOURCE_KINDS. |
-| `document_list` | `list[str]` | No | - | IDs of the DugDocuments that came from this resource. |
-| `resource_list` | `list[str]` | No | - | IDs of the DugResources inside this one, e.g. the deposits in a community. |
 
 ## DugSection
 

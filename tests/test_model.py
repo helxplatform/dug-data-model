@@ -127,7 +127,6 @@ class TestDugDocument:
         assert not isinstance(d, DugResource)
         assert d.repository == "zenodo"
         assert "resource_type" not in DugDocument.model_fields
-        assert "document_list" not in DugDocument.model_fields
 
     def test_resources_by_class_are_not_documents(self):
         elements = DugElementParsedList.validate_python([
@@ -151,8 +150,7 @@ class TestDugDocument:
         d = DugDocument(
             id="d1", name="README", description="", file_name="README.pdf",
             mime_type="application/pdf", document_type="readme", authors=["A. Author"],
-            doi="10.1234/abc", license="CC-BY-4.0", content_list=["d1/intro"],
-            studies=["s1"],
+            doi="10.1234/abc", license="CC-BY-4.0", studies=["s1"],
         )
         es = d.get_searchable_dict()
         assert es["element_type"] == "document"
@@ -165,7 +163,7 @@ class TestDugDocument:
         assert es["doi"] == "10.1234/abc"
         assert es["license"] == "CC-BY-4.0"
         assert "content" not in es
-        assert es["content_list"] == ["d1/intro"]
+        assert "content_list" not in es
 
 
 class TestDugContent:
@@ -239,7 +237,7 @@ class TestDugResource:
         r = DugResource(
             id="r1", name="Dataset", description="A dataset", repository="zenodo",
             authors=["A. Author"], doi="10.5281/zenodo.1", license="CC0-1.0",
-            document_list=["d1"], action="https://zenodo.org/records/1", studies=["s1"],
+            action="https://zenodo.org/records/1", studies=["s1"],
         )
         es = r.get_searchable_dict()
         assert es["element_type"] == "resource"
@@ -249,8 +247,7 @@ class TestDugResource:
         assert es["authors"] == ["A. Author"]
         assert es["doi"] == "10.5281/zenodo.1"
         assert es["license"] == "CC0-1.0"
-        assert es["document_list"] == ["d1"]
-        assert es["resource_list"] == []
+        assert not {"document_list", "resource_list"} & set(es)
         assert es["action"] == "https://zenodo.org/records/1"
 
 
@@ -377,9 +374,9 @@ class TestDugElementParsedList:
     def test_roundtrip_document_hierarchy(self, tmp_path):
         original = [
             DugResource(id="r1", name="Dataset", description="desc", doi="10.1/x",
-                        document_list=["d1"], parents=["s1"], parent_type="study"),
+                        parents=["s1"], parent_type="study"),
             DugDocument(id="d1", name="README", description="", mime_type="application/pdf",
-                        content_list=["d1/intro"], parents=["r1"], parent_type="resource"),
+                        parents=["r1"], parent_type="resource"),
             DugContent(id="d1/intro", name="Intro", description="", content="Text",
                        position=0, page=1, parents=["d1"], parent_type="document"),
         ]

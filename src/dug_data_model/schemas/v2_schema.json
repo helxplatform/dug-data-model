@@ -245,7 +245,7 @@
       "type": "object"
     },
     "DugDocument": {
-      "description": "One file in one format: a README, a protocol PDF, a paper's PDF, a data XLSX, ...\n\nA `DugResource` is the thing with a URL (a deposit, a publication, a web page); a document\nis one file of it. Its parent is that resource or, when it came from no known resource,\nits study. Like a resource, a document has a title (`name`), a summary (`description`), a\nlanding or download URL (`action`), and the citation fields `repository`, `authors`, `doi`\nand `license`, which both get from `DugCitable`; it adds what only a file has:\n`file_name`, `mime_type` and `document_type`. A web page captured as text is a document\nwith `mime_type=\"text/html\"` and no `file_name`, under the page's resource. A document is\nnot a resource: `isinstance(x, DugResource)` is false for it, so code that picks out\ndeposits by class does not pick up their files too.\n\nA document holds no text of its own. Whatever could be read out of the file lives in its\n`DugContent` children (`content_list`), so that every piece of text is searchable and\nannotatable in the same way. The document's `license` decides whether there is any\ncontent at all: a producer emits content only when the licence allows the text to be\nincorporated (`can_include_content()` in `licenses.py`). A document is still a document\nwhen it has no content, whether because its text could not be read -- a scanned PDF, or a\nfile the curator named that no parser handles -- or because its licence does not allow\nit: it is listed and linked to, and found by its title and description. Whether a producer\nemits a document for every file in a deposit, or only for the ones a person would read, is\nthe producer's choice: the reference producer inventories data files (recordings, scans,\nspreadsheets of primary data) in the resource's `metadata` and emits no document for them.",
+      "description": "One file in one format: a README, a protocol PDF, a paper's PDF, a data XLSX, ...\n\nA `DugResource` is the thing with a URL (a deposit, a publication, a web page); a document\nis one file of it. Its parent is that resource or, when it came from no known resource,\nits study. Like a resource, a document has a title (`name`), a summary (`description`), a\nlanding or download URL (`action`), and the citation fields `repository`, `authors`, `doi`\nand `license`, which both get from `DugCitable`; it adds what only a file has:\n`file_name`, `mime_type` and `document_type`. A web page captured as text is a document\nwith `mime_type=\"text/html\"` and no `file_name`, under the page's resource. A document is\nnot a resource: `isinstance(x, DugResource)` is false for it, so code that picks out\ndeposits by class does not pick up their files too.\n\nA document holds no text of its own. Whatever could be read out of the file lives in its\n`DugContent` children, which name it in `parents` and order themselves by `position`\n(the document does not list them), so that every piece of text is searchable and\nannotatable in the same way. The document's `license` decides whether there is any\ncontent at all: a producer emits content only when the licence allows the text to be\nincorporated (`can_include_content()` in `licenses.py`). A document is still a document\nwhen it has no content, whether because its text could not be read -- a scanned PDF, or a\nfile the curator named that no parser handles -- or because its licence does not allow\nit: it is listed and linked to, and found by its title and description. Whether a producer\nemits a document for every file in a deposit, or only for the ones a person would read, is\nthe producer's choice: the reference producer inventories data files (recordings, scans,\nspreadsheets of primary data) in the resource's `metadata` and emits no document for them.",
       "properties": {
         "id": {
           "title": "Id",
@@ -376,14 +376,6 @@
           "description": "Kind of document; recommended values are listed in DOCUMENT_KINDS.",
           "title": "Document Type",
           "type": "string"
-        },
-        "content_list": {
-          "description": "IDs of this document's DugContent, in reading order.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Content List",
-          "type": "array"
         }
       },
       "required": [
@@ -395,7 +387,7 @@
       "type": "object"
     },
     "DugResource": {
-      "description": "Anything outside Dug that has a URL, at whatever size.\n\nA program website, a project's page on an NIH site, a press release, a Zenodo community,\nthe Zenodo or Figshare deposit a study's files came from, a dataset with or without a DOI,\na publication: each is a resource. `name` is its title, `description` its description,\n`action` its landing page; a resource with a DOI is citable. The dividing line from a\n`DugDocument` is format: a resource is the thing, a document is one file of it in one\nformat. A deposit's README, a paper's PDF, a dataset's XLSX and the HTML of a press release\nare documents, which share the citation fields (`repository`, `authors`, `doi`, `license`)\nthrough `DugCitable` but are not resources.\n\nA resource's parent is its study or, for a deposit in a Zenodo community or a page on a\nwebsite, the enclosing resource (`parent_type=\"resource\"`), which lists it in its\n`resource_list`. The study's own `resource_list` lists every resource in the study either\nway, so a consumer that starts from the study never has to climb.",
+      "description": "Anything outside Dug that has a URL, at whatever size.\n\nA program website, a project's page on an NIH site, a press release, a Zenodo community,\nthe Zenodo or Figshare deposit a study's files came from, a dataset with or without a DOI,\na publication: each is a resource. `name` is its title, `description` its description,\n`action` its landing page; a resource with a DOI is citable. The dividing line from a\n`DugDocument` is format: a resource is the thing, a document is one file of it in one\nformat. A deposit's README, a paper's PDF, a dataset's XLSX and the HTML of a press release\nare documents, which share the citation fields (`repository`, `authors`, `doi`, `license`)\nthrough `DugCitable` but are not resources.\n\nA resource's parent is its study or, for a deposit in a Zenodo community or a page on a\nwebsite, the enclosing resource (`parent_type=\"resource\"`). A resource lists neither its\ndocuments nor the resources inside it: they name it in `parents`, as resources name the\nstudy, and `studies` takes a consumer straight to the study from any depth. Earlier\nversions had `document_list` and `resource_list`; a file that still carries them loads\nwithout them.",
       "properties": {
         "id": {
           "title": "Id",
@@ -514,22 +506,6 @@
           "description": "Kind of resource; recommended values are listed in RESOURCE_KINDS.",
           "title": "Resource Type",
           "type": "string"
-        },
-        "document_list": {
-          "description": "IDs of the DugDocuments that came from this resource.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Document List",
-          "type": "array"
-        },
-        "resource_list": {
-          "description": "IDs of the DugResources inside this one, e.g. the deposits in a community.",
-          "items": {
-            "type": "string"
-          },
-          "title": "Resource List",
-          "type": "array"
         }
       },
       "required": [
