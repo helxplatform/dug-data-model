@@ -102,6 +102,9 @@ class DugElement(BaseModel):
         # __pydantic_fields_set__ may not exist yet, old serialized data may contain
         # removed fields (e.g. concept_action), and computed properties (e.g.
         # ml_ready_desc) have no setter. Handle all three cases gracefully.
+        # Catching ValueError also swallows the ValidationError that validate_assignment
+        # would raise, so turning that on validates nothing; validate_references() re-checks
+        # what assignment can break instead (a Literal parent_type, for one).
         try:
             super().__setattr__(name, value)
         except (AttributeError, ValueError):

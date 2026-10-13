@@ -10,9 +10,11 @@ Notes for agents and people. The README is the reference; this is what is easy t
 - **Nothing lists its children.** A child names its parent in `parents`; `studies` on
   resources and content names the study from any depth. Do not add a `*_list` of children;
   the README's "Shapes that were tried and dropped" says why.
-- **`tests/fixtures/heal_hdp00009.json` is a real producer output**, hand-edited to the
-  current shape until the producer (heal-non-data-dictionaries) catches up. Keep it loading
-  through `validate_references()` and round-tripping through `compact_dump()`.
+- **`tests/fixtures/heal_hdp00009.json` is a real producer output**, a copy of
+  heal-non-data-dictionaries' `examples/HDP00009/HDP00009.json` (`tests/test_fixtures.py`
+  says which branch and when). Keep it loading through `validate_references()` and
+  round-tripping through `compact_dump()`; a model change that breaks it needs the producer
+  changed too, or the fixture refreshed from it.
 - **Dug consumes these elements one at a time with strict index mappings.** Before adding a
   field for the index's sake, read `docs/how-dug-uses-elements.md`.
 - `pytest` and `mypy src` are the checks; mypy has long-standing errors in `base.py` and
