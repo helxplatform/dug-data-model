@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from functools import cache
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal, get_args, get_origin
 
 from .base import References
 from .utils import group_by_id
@@ -104,6 +104,13 @@ def _reference_fields(cls: type[DugElement]) -> tuple[tuple[str, References], ..
     )
 
 
+@cache
+def _literal_values(cls: type[DugElement], field_name: str) -> frozenset[object] | None:
+    """Return the values *cls*'s field allows if it is a `Literal`, else None."""
+    annotation = cls.model_fields[field_name].annotation
+    return frozenset(get_args(annotation)) if get_origin(annotation) is Literal else None
+
+
 def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str]]:
     """Find IDs that elements refer to but that are not in the collection.
 
@@ -136,8 +143,11 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     """Find references that resolve but point at the wrong kind of element.
 
     Each referenced element must have the `type` that its field's `References` marker
-    declares: `element_type`, or for `parents` the element's `parent_type` (not checked when
-    that is empty). IDs that do not resolve are left to `find_missing_references()`. Every
+    declares: `element_type`, or for `parents` the element's `parent_type`. An element that
+    names parents must say what type they are, and when its class narrows `parent_type` to a
+    `Literal`, the value must be one it allows. Loading enforces that too, but pydantic does
+    not validate assignment, so an element changed after it was built is caught here. IDs
+    that do not resolve are left to `find_missing_references()`. Every
     element is checked, even one that shares its ID with another; a reference to a shared ID
     must suit every element that has it.
 
@@ -159,10 +169,23 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
     problems: list[str] = []
     for elem in elements:
         for field_name, marker in _reference_fields(type(elem)):
-            expected = marker.element_type or (getattr(elem, marker.type_from) if marker.type_from else "")
+            refs = getattr(elem, field_name)
+            expected = marker.element_type
+            if marker.type_from:
+                expected = getattr(elem, marker.type_from)
+                allowed = _literal_values(type(elem), marker.type_from)
+                if allowed is not None and expected not in allowed:
+                    problems.append(
+                        f"{elem.id}: {marker.type_from} is {expected!r}, not one of "
+                        f"{', '.join(repr(v) for v in sorted(map(str, allowed)))}"
+                    )
+                    continue
+                if refs and not expected:
+                    problems.append(f"{elem.id}: {field_name} is set but {marker.type_from} is empty")
+                    continue
             if not expected:
                 continue
-            for ref in getattr(elem, field_name):
+            for ref in refs:
                 for target in by_id.get(ref, ()):
                     if target.type != expected:
                         problems.append(

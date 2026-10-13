@@ -592,7 +592,8 @@ def generate_markdown_schema(
         lines.append("|-------|------|----------|---------|-------------|")
 
         for field_name, field_schema in properties.items():
-            field_type = _get_type_display(field_schema, defs)
+            # A union of Literal values displays as `"a" | "b"`, whose pipes would end the cell.
+            field_type = _escape_md(_get_type_display(field_schema, defs))
             is_required = field_name in required
             required_str = "Yes" if is_required else "No"
 

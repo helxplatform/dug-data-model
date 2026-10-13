@@ -79,10 +79,10 @@ class DugResource(DugElement):
     a title, a link, a kind and a format -- in a tree or in a flat list.
 
     Resources form a tree. A resource's parent is its study (`parent_type="study"`) or the
-    resource it is part of (`parent_type="resource"`): a file hangs off the deposit it was
-    downloaded from, a deposit off its Zenodo community, a press release page off the project
-    website, a supplementary table off the paper. A file that came from no known resource
-    hangs off the study. A resource lists nothing: its children name it in `parents`, and
+    resource it is part of (`parent_type="resource"`), and nothing else: a file hangs off the
+    deposit it was downloaded from, a deposit off its Zenodo community, a press release page
+    off the project website, a supplementary table off the paper. A file that came from no
+    known resource hangs off the study. A resource lists nothing: its children name it in `parents`, and
     `studies` names the study from any depth. So a UI that shows only the resources whose
     parent is the study loses nothing, and one that follows `parents` can show the whole
     tree. A resource with the wrong parent is found by `studies` and by search, but shown in
@@ -106,6 +106,11 @@ class DugResource(DugElement):
     """
 
     type: Literal["resource"] = RESOURCE_TYPE
+    parent_type: Literal["", "study", "resource"] = Field(
+        "",
+        description="'study' when the resource hangs off its study, 'resource' when it is part "
+        "of another resource; empty only when it has no parents.",
+    )
 
     resource_type: str = Field(
         "",

@@ -29,7 +29,9 @@ class References:
 
     `element_type` is the `type` the referenced elements should have. When that varies, it is
     empty and `type_from` names the field of the same element that gives it, as `parent_type`
-    does for `parents`.
+    does for `parents`. That field must be set whenever the references are, and when a class
+    narrows it to a `Literal`, `validate_references()` checks the value against it again, so
+    that one assigned after loading is caught.
 
     There is no marker for a list of children, because no element has one: a child names its
     parent in `parents`, and nothing lists its children (see v2's `DugStudy` for why). An earlier

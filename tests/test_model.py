@@ -125,10 +125,13 @@ class TestDugContent:
     def test_its_parent_is_a_resource(self):
         DugContent(id="r/h", name="H", description="", content="t", parents=["r"],
                    parent_type="resource")
-        DugContent(id="r/h", name="H", description="", content="t")  # no parent yet
-        with pytest.raises(ValidationError, match="parent_type is 'resource'"):
-            DugContent(id="r/h", name="H", description="", content="t", parents=["d"],
-                       parent_type="document")
+        content = DugContent(id="r/h", name="H", description="", content="t", parents=["r"])
+        assert content.parent_type == "resource"
+        # Empty is rejected too: it used to be let through, and then nothing checked the parent.
+        for parent_type in ("document", ""):
+            with pytest.raises(ValidationError, match="parent_type"):
+                DugContent(id="r/h", name="H", description="", content="t", parents=["d"],
+                           parent_type=parent_type)
 
     @pytest.mark.parametrize("name, content, expected", [
         ("Methods", "We did things.", "Methods: We did things."),
@@ -163,6 +166,14 @@ class TestDugContent:
 
 
 class TestDugResource:
+    def test_its_parent_is_a_study_or_a_resource(self):
+        for parent_type in ("study", "resource", ""):
+            DugResource(id="r", name="R", description="", parent_type=parent_type)
+        for parent_type in ("section", "variable", "content"):
+            with pytest.raises(ValidationError, match="parent_type"):
+                DugResource(id="r", name="R", description="", parents=["x"],
+                            parent_type=parent_type)
+
     def test_default_type(self):
         r = DugResource(id="r1", name="Dataset", description="A dataset")
         assert r.type == RESOURCE_TYPE

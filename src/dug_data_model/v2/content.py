@@ -2,10 +2,9 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, override
 
-from pydantic import Field, computed_field, field_validator
+from pydantic import Field, computed_field
 
 from .base import DugElement, References
-from .resource import RESOURCE_TYPE
 
 CONTENT_TYPE = "content"
 
@@ -18,9 +17,10 @@ class DugContent(DugElement):
     incorporated, it is split into DugContent children, one per heading (or a single one
     when there are no headings). `name` is the heading and `content` is the text under it.
     `description` is metadata about the piece, as on every other element, and is usually
-    empty. `parents` holds the ID of the resource the text came from, with `parent_type`
-    'resource' (anything else is rejected); `studies` holds the ID of the study, as on
-    `DugResource`, so that the study can be found without climbing through the resource.
+    empty. `parents` holds the ID of the resource the text came from, and `parent_type` is
+    'resource', its default (anything else, even empty, is rejected); `studies` holds the ID
+    of the study, as on `DugResource`, so that the study can be found without climbing
+    through the resource.
 
     Content carries no licence or display flag of its own: the licence is stated once, on the
     resource, and content exists only when that licence permits it (see `licenses.py`). A
@@ -35,6 +35,9 @@ class DugContent(DugElement):
     """
 
     type: Literal["content"] = CONTENT_TYPE
+    parent_type: Literal["resource"] = Field(
+        "resource", description="Always 'resource': content is a piece of a DugResource's text."
+    )
 
     position: int = Field(0, ge=0, description="0-based order of this content within its resource.")
     level: int | None = Field(
@@ -53,16 +56,6 @@ class DugContent(DugElement):
         default_factory=list,
         description="IDs of the studies this content belongs to, as on DugResource.",
     )
-
-    @field_validator("parent_type")
-    @classmethod
-    def _parent_is_a_resource(cls, value: str) -> str:
-        if value and value != RESOURCE_TYPE:
-            raise ValueError(
-                f"content is a piece of a DugResource's text, so its parent_type is "
-                f"'{RESOURCE_TYPE}', not {value!r}"
-            )
-        return value
 
     @override
     @computed_field

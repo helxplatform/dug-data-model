@@ -176,10 +176,32 @@ class TestInconsistentReferences:
         document.studies = content.studies = ["s1"]
         validate_references([study, document, content])
 
-    def test_parent_type_left_empty_is_not_checked(self):
+    def test_content_under_a_study_is_caught_without_a_parent_type(self):
+        # parent_type defaults to 'resource', so leaving it out still checks the parent.
         study = DugStudy(id="s1", name="Study", description="desc")
         content = DugContent(id="c", name="C", description="", content="", parents=["s1"])
-        assert find_inconsistent_references([study, content]) == []
+        assert find_inconsistent_references([study, content]) == [
+            "c: parents names s1, a study, not a resource",
+        ]
+
+    def test_parents_need_a_parent_type(self):
+        study = DugStudy(id="s1", name="Study", description="desc")
+        resource = DugResource(id="r", name="R", description="", parents=["s1"])
+        variable = DugVariable(id="v", name="V", description="", parents=["s1"])
+        assert find_inconsistent_references([study, resource, variable]) == [
+            "r: parents is set but parent_type is empty",
+            "v: parents is set but parent_type is empty",
+        ]
+
+    def test_a_parent_type_assigned_after_loading_is_checked(self):
+        # Pydantic does not validate assignment, so the Literal is checked again here.
+        study, document, content = _document_tree()
+        content.parent_type = "study"
+        document.parent_type = "section"
+        assert find_inconsistent_references([study, document, content]) == [
+            "d1: parent_type is 'section', not one of '', 'resource', 'study'",
+            "d1/a: parent_type is 'study', not one of 'resource'",
+        ]
 
     def test_a_resource_inside_a_resource(self):
         study = DugStudy(id="s1", name="S", description="")

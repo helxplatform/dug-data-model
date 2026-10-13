@@ -46,9 +46,10 @@ file; if the file's text can be read, and the resource's licence allows the text
 incorporated, it is split into DugContent children, one per heading (or a single one
 when there are no headings). `name` is the heading and `content` is the text under it.
 `description` is metadata about the piece, as on every other element, and is usually
-empty. `parents` holds the ID of the resource the text came from, with `parent_type`
-'resource' (anything else is rejected); `studies` holds the ID of the study, as on
-`DugResource`, so that the study can be found without climbing through the resource.
+empty. `parents` holds the ID of the resource the text came from, and `parent_type` is
+'resource', its default (anything else, even empty, is rejected); `studies` holds the ID
+of the study, as on `DugResource`, so that the study can be found without climbing
+through the resource.
 
 Content carries no licence or display flag of its own: the licence is stated once, on the
 resource, and content exists only when that licence permits it (see `licenses.py`). A
@@ -70,7 +71,7 @@ returned whole with every hit on the resource (see docs/how-dug-uses-elements.md
 | `programs` | `list[str]` | No | - |  |
 | `action` | `str` | No | `""` |  |
 | `parents` | `list[str]` | No | - |  |
-| `parent_type` | `str` | No | `""` |  |
+| `parent_type` | `"resource"` | No | `"resource"` | Always 'resource': content is a piece of a DugResource's text. |
 | `concepts` | `dict[str, object]` | No | - |  |
 | `search_terms` | `list[str]` | No | - |  |
 | `optional_terms` | `list[str]` | No | - |  |
@@ -98,10 +99,10 @@ and how to cite it. A resource that is one file in one format also has `file_nam
 a title, a link, a kind and a format -- in a tree or in a flat list.
 
 Resources form a tree. A resource's parent is its study (`parent_type="study"`) or the
-resource it is part of (`parent_type="resource"`): a file hangs off the deposit it was
-downloaded from, a deposit off its Zenodo community, a press release page off the project
-website, a supplementary table off the paper. A file that came from no known resource
-hangs off the study. A resource lists nothing: its children name it in `parents`, and
+resource it is part of (`parent_type="resource"`), and nothing else: a file hangs off the
+deposit it was downloaded from, a deposit off its Zenodo community, a press release page
+off the project website, a supplementary table off the paper. A file that came from no
+known resource hangs off the study. A resource lists nothing: its children name it in `parents`, and
 `studies` names the study from any depth. So a UI that shows only the resources whose
 parent is the study loses nothing, and one that follows `parents` can show the whole
 tree. A resource with the wrong parent is found by `studies` and by search, but shown in
@@ -132,7 +133,7 @@ not load.
 | `programs` | `list[str]` | No | - |  |
 | `action` | `str` | No | `""` |  |
 | `parents` | `list[str]` | No | - |  |
-| `parent_type` | `str` | No | `""` |  |
+| `parent_type` | `"" \| "study" \| "resource"` | No | `""` | 'study' when the resource hangs off its study, 'resource' when it is part of another resource; empty only when it has no parents. |
 | `concepts` | `dict[str, object]` | No | - |  |
 | `search_terms` | `list[str]` | No | - |  |
 | `optional_terms` | `list[str]` | No | - |  |
