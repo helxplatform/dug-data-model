@@ -264,7 +264,9 @@ not schema: nothing here is validated. (The producer still writes the previous s
   was downloaded from. Each content element copies its resource's `action`.
 - **Licence.** A file takes its own curated licence, else its deposit's, else a study-level
   default; its text becomes content only when `can_include_content(resource.license)` is
-  true, else the file is emitted with no content.
+  true, else the file is emitted with no content. A resource whose source states that it has
+  no licence (OSF's "No license") carries `license="NONE"`, SPDX's value for "no licence
+  declared"; an empty `license` means nobody has checked.
 - **`metadata` keys.** On a deposit: `files = {"count": N, "bytes": B, "by_extension":
   {".nev": 13, ...}}`, an inventory of every file in the deposit including those that became no
   resource (`.nii.gz` keeps its double extension; files without one are `"(none)"`). On a
