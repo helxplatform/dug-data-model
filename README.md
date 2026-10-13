@@ -115,8 +115,12 @@ time. So every resource and content element also carries `studies`, the IDs of t
 it belongs to at any depth, written by the producer, which knows the study even when it does
 not emit it. One query on `studies` finds everything in a study; see
 [docs/how-dug-uses-elements.md](docs/how-dug-uses-elements.md) for what Dug does with these
-fields. `validate_references()` checks that every `parents`, `studies`, `variable_list` and
-`section_list` ID resolves within a collection and points at the right type of element.
+fields. `validate_references()` checks that no two elements in a collection share an ID,
+that every `parents`, `studies`, `variable_list` and `section_list` ID resolves within it and
+points at the right type of element, and that each element's `studies` names exactly what its
+parents imply: the studies it hangs off directly, and the `studies` of the resources it hangs
+off. A content element whose `studies` was left empty fails, since a filter on `studies`
+would not find it.
 
 Which file is "the" publication? The child whose `resource_type` matches its parent's: the
 PDF of a `publication` is a `publication` with `mime_type="application/pdf"`, a protocol's PDF
@@ -367,6 +371,10 @@ class DugStudy(DugElement):
     type: Literal["study"] = "study"
     variable_list: Annotated[list[str], References("variable")] = Field(default_factory=list)
 ```
+
+A field that names every ancestor of a type, at any depth, as `studies` does, is marked
+`References("study", inherited=True)`, and `validate_references()` then checks it against the
+element's parents rather than trusting the producer to have derived it correctly.
 
 #### 2. Define your Indexable union
 

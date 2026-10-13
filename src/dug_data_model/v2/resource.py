@@ -141,7 +141,7 @@ class DugResource(DugElement):
         description="IANA media type when the resource is one file, e.g. 'application/pdf'; "
         "empty for a landing page.",
     )
-    studies: Annotated[list[str], References("study")] = Field(
+    studies: Annotated[list[str], References("study", inherited=True)] = Field(
         default_factory=list,
         description="IDs of the studies this resource belongs to, at any depth below them; "
         "`parents` names only the element directly above.",

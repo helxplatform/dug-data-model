@@ -83,9 +83,9 @@ def _document_tree():
     return [
         DugStudy(id="s1", name="Study", description="desc"),
         DugResource(id="d1", name="Doc", description="", mime_type="application/pdf",
-                    parents=["s1"], parent_type="study"),
+                    parents=["s1"], parent_type="study", studies=["s1"]),
         DugContent(id="d1/a", name="A", description="", content="text",
-                   parents=["d1"], parent_type="resource"),
+                   parents=["d1"], parent_type="resource", studies=["s1"]),
     ]
 
 
@@ -96,7 +96,7 @@ class TestReferences:
 
     def test_missing_parent(self):
         elements = _document_tree()[1:]  # drop the study
-        assert find_missing_references(elements) == {"parents": {"s1"}}
+        assert find_missing_references(elements) == {"parents": {"s1"}, "studies": {"s1"}}
 
     def test_missing_list_member(self):
         study = DugStudy(id="s1", name="Study", description="desc", variable_list=["v1"])
@@ -138,8 +138,10 @@ def _resource_tree():
     """A study, a deposit, and a file in the deposit."""
     return [
         DugStudy(id="s1", name="Study", description="desc"),
-        DugResource(id="r1", name="Deposit", description="", parents=["s1"], parent_type="study"),
-        DugResource(id="d1", name="Doc", description="", parents=["r1"], parent_type="resource"),
+        DugResource(id="r1", name="Deposit", description="", parents=["s1"], parent_type="study",
+                    studies=["s1"]),
+        DugResource(id="d1", name="Doc", description="", parents=["r1"], parent_type="resource",
+                    studies=["s1"]),
     ]
 
 
@@ -167,6 +169,7 @@ class TestInconsistentReferences:
         content.studies = ["s1", "d1"]
         assert find_inconsistent_references([study, document, content]) == [
             "d1/a: studies names d1, a resource, not a study",
+            "d1/a: studies names d1, s1, but its parents put it under s1",
         ]
 
     def test_a_study_named_in_studies_need_not_list_the_element(self):
@@ -179,14 +182,15 @@ class TestInconsistentReferences:
     def test_content_under_a_study_is_caught_without_a_parent_type(self):
         # parent_type defaults to 'resource', so leaving it out still checks the parent.
         study = DugStudy(id="s1", name="Study", description="desc")
-        content = DugContent(id="c", name="C", description="", content="", parents=["s1"])
+        content = DugContent(id="c", name="C", description="", content="", parents=["s1"],
+                             studies=["s1"])
         assert find_inconsistent_references([study, content]) == [
             "c: parents names s1, a study, not a resource",
         ]
 
     def test_parents_need_a_parent_type(self):
         study = DugStudy(id="s1", name="Study", description="desc")
-        resource = DugResource(id="r", name="R", description="", parents=["s1"])
+        resource = DugResource(id="r", name="R", description="", parents=["s1"], studies=["s1"])
         variable = DugVariable(id="v", name="V", description="", parents=["s1"])
         assert find_inconsistent_references([study, resource, variable]) == [
             "r: parents is set but parent_type is empty",
@@ -206,9 +210,10 @@ class TestInconsistentReferences:
     def test_a_resource_inside_a_resource(self):
         study = DugStudy(id="s1", name="S", description="")
         community = DugResource(id="community", name="Lab's Zenodo community", description="",
-                                resource_type="website", parents=["s1"], parent_type="study")
+                                resource_type="website", parents=["s1"], parent_type="study",
+                                studies=["s1"])
         deposit = DugResource(id="deposit", name="Deposit", description="",
-                              parents=["community"], parent_type="resource")
+                              parents=["community"], parent_type="resource", studies=["s1"])
         assert find_inconsistent_references([study, community, deposit]) == []
 
     def test_nothing_lists_its_children(self):
@@ -241,6 +246,41 @@ class TestInconsistentReferences:
         with pytest.raises(DuplicateIdError) as exc_info:
             validate_references([study, document, content, twin])
         assert exc_info.value.duplicate_ids == {"d1": 2}
+
+    def test_studies_left_empty_under_a_study(self):
+        study, document, content = _document_tree()
+        content.studies = []
+        assert find_inconsistent_references([study, document, content]) == [
+            "d1/a: studies names nothing, but its parents put it under s1",
+        ]
+
+    def test_studies_naming_a_different_study_from_the_parent(self):
+        study, document, content = _document_tree()
+        other = DugStudy(id="s2", name="Other", description="")
+        content.studies = ["s2"]
+        assert find_inconsistent_references([study, other, document, content]) == [
+            "d1/a: studies names s2, but its parents put it under s1",
+        ]
+
+    def test_studies_gather_every_parent(self):
+        # A paper two studies cite hangs off both, and so does everything under it.
+        s1 = DugStudy(id="s1", name="One", description="")
+        s2 = DugStudy(id="s2", name="Two", description="")
+        paper = DugResource(id="paper", name="Paper", description="", parents=["s1", "s2"],
+                            parent_type="study", studies=["s2", "s1"])
+        pdf = DugResource(id="paper/pdf", name="PDF", description="", parents=["paper"],
+                          parent_type="resource", studies=["s1", "s2"])
+        assert find_inconsistent_references([s1, s2, paper, pdf]) == []
+        pdf.studies = ["s1"]
+        assert find_inconsistent_references([s1, s2, paper, pdf]) == [
+            "paper/pdf: studies names s1, but its parents put it under s1, s2",
+        ]
+
+    def test_studies_are_not_checked_without_parents_or_with_one_missing(self):
+        study = DugStudy(id="s1", name="Study", description="desc")
+        orphan = DugResource(id="r", name="R", description="", studies=["s1"])
+        stray = DugContent(id="c", name="C", description="", content="", parents=["gone"])
+        assert find_inconsistent_references([study, orphan, stray]) == []
 
     def test_validate_raises_on_inconsistency(self):
         study, document, content = _document_tree()

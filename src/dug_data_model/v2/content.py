@@ -52,7 +52,7 @@ class DugContent(DugElement):
             "held in `description` fails to load instead of loading with no text."
         )
     )
-    studies: Annotated[list[str], References("study")] = Field(
+    studies: Annotated[list[str], References("study", inherited=True)] = Field(
         default_factory=list,
         description="IDs of the studies this content belongs to, as on DugResource.",
     )

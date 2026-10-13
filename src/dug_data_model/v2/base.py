@@ -33,6 +33,11 @@ class References:
     narrows it to a `Literal`, `validate_references()` checks the value against it again, so
     that one assigned after loading is caught.
 
+    `inherited` marks a field that names every ancestor of `element_type`, at any depth, as
+    v2's `studies` does. Such a field is derived from the tree, so `validate_references()`
+    checks that it names exactly the element's parents of that type plus whatever the same
+    field names on its other parents.
+
     There is no marker for a list of children, because no element has one: a child names its
     parent in `parents`, and nothing lists its children (see v2's `DugStudy` for why). An earlier
     version had `children=True` on `document_list`, `resource_list` and `content_list` and
@@ -42,6 +47,7 @@ class References:
 
     element_type: str = ""
     type_from: str = ""
+    inherited: bool = False
 
 
 class DugElement(BaseModel):

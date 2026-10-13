@@ -147,7 +147,9 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     names parents must say what type they are, and when its class narrows `parent_type` to a
     `Literal`, the value must be one it allows. Loading enforces that too, but pydantic does
     not validate assignment, so an element changed after it was built is caught here. IDs
-    that do not resolve are left to `find_missing_references()`. Every
+    that do not resolve are left to `find_missing_references()`. A field marked `inherited`,
+    such as `studies`, must name exactly what the element's parents imply: the parents of its
+    `element_type`, and whatever the same field names on the other parents. Every
     element is checked, even one that shares its ID with another; a reference to a shared ID
     must suit every element that has it.
 
@@ -192,7 +194,36 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
                             f"{elem.id}: {field_name} names {ref}, a {target.type or 'untyped element'}, "
                             f"not a {expected}"
                         )
+            if marker.inherited:
+                problem = _inherited_problem(elem, field_name, marker.element_type, by_id)
+                if problem:
+                    problems.append(problem)
     return problems
+
+
+def _inherited_problem(elem: DugElement, field_name: str, element_type: str, by_id: _Index) -> str:
+    """Return a problem if *elem*'s inherited *field_name* is not what its parents imply.
+
+    The parents imply those of them that are of *element_type*, and whatever the same field
+    names on the others. An element without parents is not checked, since there is nothing
+    to derive the field from, nor one whose parents do not all resolve.
+    """
+    implied: set[str] = set()
+    for parent_id in elem.parents:
+        if parent_id not in by_id:
+            return ""
+        for parent in by_id[parent_id]:
+            if parent.type == element_type:
+                implied.add(parent.id)
+            else:
+                implied.update(getattr(parent, field_name, ()))
+    named = set(getattr(elem, field_name))
+    if not elem.parents or named == implied:
+        return ""
+    return (
+        f"{elem.id}: {field_name} names {', '.join(sorted(named)) or 'nothing'}, but its parents "
+        f"put it under {', '.join(sorted(implied)) or 'nothing'}"
+    )
 
 
 def validate_references(elements: Iterable[DugElement]) -> None:
