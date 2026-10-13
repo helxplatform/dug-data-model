@@ -3,10 +3,8 @@ from .concept import CONCEPT_TYPE, DugConcept
 from .variable import VARIABLE_TYPE, DugVariable
 from .study import STUDY_TYPE, DugStudy
 from .section import SECTION_TYPE, DugSection
-from .citable import DugCitable
-from .document import DOCUMENT_KINDS, DOCUMENT_TYPE, DugDocument
-from .content import CONTENT_TYPE, DugContent
 from .resource import REPOSITORY_KINDS, RESOURCE_KINDS, RESOURCE_TYPE, DugResource
+from .content import CONTENT_TYPE, DugContent
 from .licenses import CONTENT_LICENSES, can_include_content
 from .types import (
     InputFile,
@@ -49,10 +47,8 @@ DugConcept.model_rebuild()
 DugVariable.model_rebuild()
 DugStudy.model_rebuild()
 DugSection.model_rebuild()
-DugCitable.model_rebuild()
-DugDocument.model_rebuild()
-DugContent.model_rebuild()
 DugResource.model_rebuild()
+DugContent.model_rebuild()
 
 __all__ = [
     # Core classes
@@ -62,10 +58,8 @@ __all__ = [
     "DugVariable",
     "DugStudy",
     "DugSection",
-    "DugCitable",
-    "DugDocument",
-    "DugContent",
     "DugResource",
+    "DugContent",
     # Type definitions
     "Indexable",
     "Parser",
@@ -78,10 +72,8 @@ __all__ = [
     "STUDY_TYPE",
     "CONCEPT_TYPE",
     "SECTION_TYPE",
-    "DOCUMENT_TYPE",
-    "CONTENT_TYPE",
-    "DOCUMENT_KINDS",
     "RESOURCE_TYPE",
+    "CONTENT_TYPE",
     "RESOURCE_KINDS",
     "REPOSITORY_KINDS",
     "CONTENT_LICENSES",

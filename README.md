@@ -66,45 +66,75 @@ data = json.loads("""
 elements = DugElementParsedList.validate_python(data)
 ```
 
-### Documents and the resources they come from
+### Resources and their content
 
 Studies come with more than data dictionaries: repository deposits, READMEs, protocols,
-publications, project websites. Three element types describe them, one per level:
+publications, project websites. Two element types describe them:
 
 - **`DugResource`** — anything outside Dug that has a URL, at whatever size: a program website,
   a project's page on an NIH site, a press release, a Zenodo community, the Zenodo or Figshare
   deposit a study's files came from, a dataset with or without a DOI, a publication or
-  preprint. `resource_type` says which (see `RESOURCE_KINDS`).
-- **`DugDocument`** — one file in one format: the deposit's README, the paper's PDF, the
-  dataset's XLSX or ZIP, the HTML of the press release. Like a resource it has a title,
-  description and link, and it shares the citation fields `repository`, `authors`, `doi` and
-  `license` with `DugResource` through their common base class, `DugCitable`; it adds
-  `file_name`, `mime_type` and `document_type`. A document is not a resource, so
-  `isinstance(x, DugResource)` picks out resources only (`isinstance(x, DugCitable)` picks out
-  both). A document holds **no text of its own**.
-- **`DugContent`** — a piece of a document's text: a heading (`name`) and the body under it
+  preprint, and each file of any of these: the deposit's README, the paper's PDF, the
+  dataset's XLSX, the HTML of the press release. `resource_type` says what it is (see
+  `RESOURCE_KINDS`); `repository`, `authors`, `doi` and `license` say where it is published
+  and how to cite it. A resource that is one file in one format also has `file_name` and
+  `mime_type`; a landing page has neither. A resource holds **no text of its own**.
+- **`DugContent`** — a piece of a resource's text: a heading (`name`) and the body under it
   (`content`). This is the only element that carries text, and it exists only when the
-  document's licence allows the text to be incorporated.
+  resource's licence allows the text to be incorporated.
 
-The line between the first two is format, not size or importance. A publication is a
-resource (the work: its DOI, landing page and authors) and its full text is a document under
-it with `document_type="article"`; a dataset on Zenodo is a resource and each downloadable
-file in it may be a document; a press release is a resource and its page captured as text is
-a document with `mime_type="text/html"`. Whether a producer emits a document for every file
-or only for the ones a person would read is its own choice (see the reference producer's
-conventions below).
+Resources form a tree under the study:
 
-The example below is a shortened copy of HEAL study
-[HDP00009](https://healdata.org/portal/discovery/HDP00009) as the reference producer (see
-below) writes it; the whole record is in
+```
+DugStudy
+ ├─ DugResource   the deposit        parents=[study],   parent_type="study",    studies=[study]
+ │   ├─ DugResource   its README       parents=[deposit], parent_type="resource", studies=[study]
+ │   │   └─ DugContent   one heading    parents=[readme],  parent_type="resource", studies=[study]
+ │   └─ DugResource   a data file      (if the producer chose to emit one)
+ └─ DugResource   the paper          parents=[study],   parent_type="study"
+     ├─ DugResource   its PDF          resource_type="publication", like its parent
+     └─ DugResource   a supplement     resource_type="supplementary_table"
+```
+
+A resource's parent is its study or the resource it is part of: a file hangs off the
+deposit it was downloaded from, a deposit off its Zenodo community, a press release page off
+the project website, a supplement off its paper. A file that came from no known resource
+hangs off the study. Content's parent is always the resource whose text it is. **Nothing
+lists its children**: a child names its parent in `parents`, and a consumer finds children
+with `build_parent_map()` or `get_children()` in `dug_data_model.v2`, or in an index with a
+query on `parents`. That is because the study and its resources need not come from the same
+producer: under [DUG-796](https://renci.atlassian.net/browse/DUG-796) the non-data-dictionary
+producer emits resources for a study that the MDS ingest emits separately, so a list on the
+study could never be complete, and the same holds one level down when text is re-extracted
+or withheld after a licence review. `parents` is the one link that a producer emitting only
+the children can write.
+
+Going the other way, `parents` reaches only the next element up, so from a piece of content
+the study is three hops away, and Dug's index can filter on `parents` only one hop at a
+time. So every resource and content element also carries `studies`, the IDs of the studies
+it belongs to at any depth, written by the producer, which knows the study even when it does
+not emit it. One query on `studies` finds everything in a study; see
+[docs/how-dug-uses-elements.md](docs/how-dug-uses-elements.md) for what Dug does with these
+fields. `validate_references()` checks that every `parents`, `studies`, `variable_list` and
+`section_list` ID resolves within a collection and points at the right type of element.
+
+Which file is "the" publication? The child whose `resource_type` matches its parent's: the
+PDF of a `publication` is a `publication` with `mime_type="application/pdf"`, a protocol's PDF
+is a `protocol`. A file that is something of its own under the same parent -- a
+`supplementary_table`, a `readme` -- has its own kind. There is no flag for this, and no
+`article` kind: the convention covers every kind of resource the same way.
+
+The example below is HEAL study [HDP00009](https://healdata.org/portal/discovery/HDP00009)
+in the shape the reference producer (see below) writes; the whole record is in
 [`tests/fixtures/heal_hdp00009.json`](tests/fixtures/heal_hdp00009.json). The study has two
 Figshare deposits, each with a PDF README; only the first deposit is shown here, and long
-descriptions and the author list are cut short. The preprint at the end is not in the fixture:
-it is the paper the README asks users to cite, written as the HEAL Platform's
-`primary_publications` would give it, and shows a publication as a resource with no document.
+descriptions and the author list are cut short. The preprint at the end is not in the
+fixture: it is the paper the README asks users to cite, written as the HEAL Platform's
+`primary_publications` would give it, and shows a publication as a resource with no file
+under it.
 
 ```python
-from dug_data_model.v2 import DugContent, DugDocument, DugResource, DugStudy
+from dug_data_model.v2 import DugContent, DugResource, DugStudy
 
 dataset = DugResource(
     id="HDP00009/resources/doi-org-10-6084-m9-figshare-24867198",
@@ -119,23 +149,23 @@ dataset = DugResource(
     license="CC-BY-4.0",
     metadata={"files": {"count": 9, "bytes": 410870, "by_extension": {".pdf": 1, ".xlsx": 8}}},
     parents=["HDP00009"], parent_type="study",
-    document_list=["HDP00009/assets/24867198/README.pdf"],
+    studies=["HDP00009"],
 )
 
-readme = DugDocument(
+readme = DugResource(
     id="HDP00009/assets/24867198/README.pdf",
     name="README: behavior assessments and analyses",  # display title
     description="",
     action=dataset.action,                   # the deposit, as the file has no DOI of its own
-    repository="figshare",                   # a DugCitable field, like license
+    resource_type="readme",                  # its own kind: it is not the deposit in PDF form
+    repository="figshare",
     license="CC-BY-4.0",                     # the deposit's licence unless the file states its own;
                                              # it allows the text below, see CONTENT_LICENSES
-    file_name="README.pdf",
+    file_name="README.pdf",                  # what makes this resource a file
     mime_type="application/pdf",
-    document_type="readme",                  # see DOCUMENT_KINDS
     metadata={"page_count": 2},
     parents=[dataset.id], parent_type="resource",
-    content_list=["HDP00009/assets/24867198/README.pdf/readmepdf"],
+    studies=["HDP00009"],
 )
 
 section = DugContent(
@@ -146,7 +176,8 @@ section = DugContent(
             "assessment with analysis. ...",  # the text under the heading
     action=readme.action,                    # where to read the text at its source
     position=0, page=1,
-    parents=[readme.id], parent_type="document",
+    parents=[readme.id], parent_type="resource",
+    studies=["HDP00009"],
 )
 
 preprint = DugResource(
@@ -155,11 +186,12 @@ preprint = DugResource(
          "modulating pain processing brain circuits",  # from Crossref; the DOI itself if unresolved
     description="",
     action="https://doi.org/10.1101/2022.12.07.519518",
-    resource_type="preprint",                # a publication is a resource; its PDF would be
-    repository="biorxiv",                    # a document under it with document_type="article"
+    resource_type="preprint",                # its PDF, if fetched, would be a "preprint" with
+    repository="biorxiv",                    # mime_type="application/pdf" under it
     authors=["Min Gon Kim", "Kai Yu", "Chih-Yu Yeh"],
     doi="10.1101/2022.12.07.519518",
     parents=["HDP00009"], parent_type="study",
+    studies=["HDP00009"],
 )
 
 study = DugStudy(
@@ -167,52 +199,47 @@ study = DugStudy(
     name="Treating pain in sickle cell disease by means of focused ultrasound neuromodulation",
     description="Researchers will develop a novel transcranial focused ultrasound (tFUS) ...",
     metadata={"appl_id": 9932691},
-)   # the study lists nothing: its resources and documents name it in `parents`
+)   # the study lists nothing: its resources name it in `parents` and `studies`
 ```
 
-An element has a single `parent_type`, so a document's parent is either its resource or,
-when it did not come from a known resource, its study. A resource's parent is likewise either
-its study or an enclosing resource: a Zenodo community holds deposits, a project website holds
-a press release page, and each inner resource names the outer one in `parents` with
-`parent_type="resource"` and is listed in the outer one's `resource_list`. `validate_references()`
-checks that all of these IDs resolve within a collection, that each points at the right type of
-element (a `content_list` names content, a `parents` entry has the element's `parent_type`),
-and that a document's `content_list` and a resource's `document_list` and `resource_list`
-agree with their children's `parents`.
-
-The study itself lists nothing. Its resources and documents name it in `parents`, and a
-consumer finds them with `build_parent_map()` or `get_children()` in `dug_data_model.v2`, or
-in an index with a query on `parents`. Going the other way, from a piece of content up to its
-study, follows `parents` through the document and then the resource: three hops, or two when
-the document hangs off the study directly. **This is a decision to review.** An earlier
-revision gave `DugStudy` a `document_list` and a `resource_list` naming every document and
-resource in the study, so that a consumer starting from the study never had to climb. They
-were dropped because the study and its resources need not come from the same producer: under
-[DUG-796](https://renci.atlassian.net/browse/DUG-796) the non-data-dictionary producer emits
-resources and documents for a study that the MDS ingest emits separately, so nothing could
-fill the study's lists and a consumer trusting them would see an empty study. `parents` is
-the one link that a producer emitting only the children can write.
-
 Text is only ever incorporated under a licence that allows it, and the licence is stated once,
-on the document. A producer emits `DugContent` for a document only when
-`can_include_content(document.license)` is true; the licences that count are listed in
+on the resource. A producer emits `DugContent` for a file only when
+`can_include_content(resource.license)` is true; the licences that count are listed in
 `CONTENT_LICENSES`, so that every producer draws the line in the same place, and NonCommercial
 and NoDerivatives licences are left for a person to decide. So if content exists, its text may
-be indexed and shown, and nothing downstream has to check a flag. A document whose licence does
-not allow it is still a document, with its `license` and no content: it is found by its title
+be indexed and shown, and nothing downstream has to check a flag. A file whose licence does
+not allow it is still a resource, with its `license` and no content: it is found by its title
 and description, and the UI sends the user to `action` to read it at the source. A file whose
-format nothing can read is a document with no content in the same way. An earlier version of
-this model kept the text of every document in the index behind a `can_display_content` flag on
-the content; that stated permission without enforcing it, since Dug's endpoints return the
-indexed `_source` as is, and was dropped for the shape above.
+format nothing can read is a resource with no content in the same way.
 
-`document_type` and `resource_type` are free strings; `DOCUMENT_KINDS` and `RESOURCE_KINDS`
-list the recommended values. The one value a resource may not have is `resource_type="document"`:
-a single file is a `DugDocument`. Both lists are coarse on purpose. A finer kind, such as one of
-PubMed's [publication types](https://pubmed.ncbi.nlm.nih.gov/help/#publication-types) ("Review",
+`resource_type` is a free string; `RESOURCE_KINDS` lists the recommended values, coarse on
+purpose. A finer kind, such as one of PubMed's
+[publication types](https://pubmed.ncbi.nlm.nih.gov/help/#publication-types) ("Review",
 "Randomized Controlled Trial"), belongs in `tags` as `{"category": "publication_type", "value":
 ...}`, which every element has and which an index can filter on, rather than in a longer
 `RESOURCE_KINDS`.
+
+#### Shapes that were tried and dropped
+
+Recorded so that the next person does not go the same way.
+
+- **A separate `DugDocument` type for a file**, sharing its citation fields with
+  `DugResource` through a `DugCitable` base class. Every awkward case came from drawing the
+  line between the two: a press release page captured as text was both; a PDF report with a
+  DOI was either; a document whose deposit was unknown hung off the study while its siblings
+  hung off a resource; and a UI had to render two types. One type in a tree needs none of
+  that.
+- **Child lists** (`document_list`, `resource_list`, `content_list`, and before them
+  `DugStudy.document_list` and `resource_list`), validated in both directions against
+  `parents`. Dug never read them, reading order is in `DugContent.position`, and the
+  multi-producer argument that removed them from the study applies one level down too.
+- **Content embedded in its resource** as a list, so that a producer emits one object per
+  file. Dug annotates and indexes each element on its own, so embedded text would be sent
+  to the annotator as one PDF-sized string (or not at all) and returned whole with every hit
+  on the resource; a separate element is annotated as one bounded section and is its own hit.
+- **Text behind a `can_display_content` flag** on the content, with every document's text in
+  the index. That stated permission without enforcing it, since Dug's endpoints return the
+  indexed `_source` as is; now content exists only when the licence allows it.
 
 #### Reference producer conventions
 
@@ -220,40 +247,44 @@ The model leaves several things to the producer. These are the conventions of th
 producer,
 [heal-non-data-dictionaries](https://github.com/heal-data-stewards/heal-non-data-dictionaries),
 recorded so that a second producer, or a UI, does not have to reinvent or guess them. They are
-not schema: nothing here is validated.
+not schema: nothing here is validated. (The producer still writes the previous shape, with
+`DugDocument`; this is the shape it is being moved to.)
 
-- **IDs.** A resource is `<study>/resources/<url-slug>` (the URL's host and path, lower-cased,
-  non-alphanumerics collapsed to `-`), or `<parent resource>/<url-slug>` when it is inside
-  another resource; a document is `<study>/assets/<path under assets/>`; a
-  content element is `<document>/<heading-slug>`, with `_2`, `_3` on repeated headings and
-  `section-N` (N = 1-based position) when a heading has nothing sluggable in it.
-- **`action`.** A resource links to its landing page. A document links to an explicit curated
-  URL, else `https://doi.org/<doi>` when it has its own DOI, else the deposit URL it was
-  downloaded from. Each content element copies its document's `action`.
-- **Licence.** A document takes its own curated licence, else its resource's, else a
-  study-level default; its text becomes content only when
-  `can_include_content(document.license)` is true, else the document is emitted with no
-  content.
-- **`metadata` keys.** On a resource: `files = {"count": N, "bytes": B, "by_extension":
+- **IDs.** A resource with a URL is `<study>/resources/<url-slug>` (the URL's host and path,
+  lower-cased, non-alphanumerics collapsed to `-`), or `<parent resource>/<url-slug>` when it
+  is inside another resource. A file is `<study>/assets/<path under assets/>`, its place in
+  the curated inputs, whichever resource it hangs off, so that re-curating where a file came
+  from does not change its ID. A content element is `<file>/<heading-slug>`, with `_2`, `_3`
+  on repeated headings and `section-N` (N = 1-based position) when a heading has nothing
+  sluggable in it. A resource that belongs to several studies (a paper two studies cite)
+  should get one ID that embeds neither study, with both in `parents` and `studies`; the
+  producer does not do this yet, as it works one study at a time.
+- **`action`.** A resource with a URL links to its landing page. A file links to an explicit
+  curated URL, else `https://doi.org/<doi>` when it has its own DOI, else the deposit URL it
+  was downloaded from. Each content element copies its resource's `action`.
+- **Licence.** A file takes its own curated licence, else its deposit's, else a study-level
+  default; its text becomes content only when `can_include_content(resource.license)` is
+  true, else the file is emitted with no content.
+- **`metadata` keys.** On a deposit: `files = {"count": N, "bytes": B, "by_extension":
   {".nev": 13, ...}}`, an inventory of every file in the deposit including those that became no
-  document (`.nii.gz` keeps its double extension; files without one are `"(none)"`). On a
-  document: `page_count` for paginated formats; `embedded` (`title`, `author`, `creator`,
+  resource (`.nii.gz` keeps its double extension; files without one are `"(none)"`). On a
+  file: `page_count` for paginated formats; `embedded` (`title`, `author`, `creator`,
   `created`, `modified`, as stored in the file, for provenance only, since they are usually an
-  OS account name or blank); `text_extraction` when a document has no content: `"none"` (no
+  OS account name or blank); `text_extraction` when a file has no content: `"none"` (no
   text layer), `"no_handler"` (a curated file no parser handles) or `"not_licensed"` (the
   licence does not allow the text to be incorporated). On a study: `appl_id` (NIH
   application id), `notes` (curator's notes), and anything else from the study's curated
   metadata.
-- **Which files become documents.** Files a parser can read (Word, PDF, Markdown, plain text;
-  spreadsheets and CSV when asked for). A curated file no parser handles becomes a document
+- **Which files become resources.** Files a parser can read (Word, PDF, Markdown, plain text;
+  spreadsheets and CSV when asked for). A curated file no parser handles becomes a resource
   with no content. Everything else -- recordings, scans, images, primary data -- is counted in
-  its resource's `files` inventory and nothing more. The model allows a document for any file
-  (`document_type="data"`); this producer chooses not to emit one.
+  its deposit's `files` inventory and nothing more. The model allows a resource for any file
+  (`resource_type="data"`); this producer chooses not to emit one.
 - **Publications.** The HEAL Platform's `study_metadata.findings.primary_publications` is a list
   of DOI URLs. Each becomes a `DugResource` with `resource_type="publication"` (or
   `"preprint"`), `action` the URL, `doi` the bare DOI, and `name` the title when the DOI
   resolves (Crossref) and the DOI itself when it does not, since `name` is required. No
-  document is emitted for it unless the full text is fetched. A PubMed ID goes in
+  file is emitted under it unless the full text is fetched. A PubMed ID goes in
   `metadata["pmid"]`, so that a publication can be matched to the knowledge graph's PubMed
   nodes; the model has no field for it because only publications have one.
 - **Links between resources that are not containment.** A paper is about a deposit, a deposit
@@ -264,6 +295,7 @@ not schema: nothing here is validated.
   to show them.
 - **Download counts** from a repository API go in `metadata["downloads"]` on the resource, as
   an integer, with `metadata["downloads_as_of"]` holding the ISO date they were read.
+
 ## Scaffold: Creating a New Model Version
 
 Use the scaffold CLI to generate a new data model version inside the package. It copies the
@@ -410,11 +442,10 @@ python -m dug_data_model.scaffold schema v2 --format markdown -o src/dug_data_mo
 | Class | `type` field | Description |
 |---|---|---|
 | `DugVariable` | `"variable"` | A data variable (e.g., dbGaP variable or CDE) |
-| `DugStudy` | `"study"` | A research study; its datasets, publications and documents name it in their `parents` |
+| `DugStudy` | `"study"` | A research study; its resources name it in their `parents` and `studies` |
 | `DugSection` | `"section"` | A section or instrument within a study |
-| `DugResource` | `"resource"` | Anything external with a URL, at any size: a deposit, a dataset, a publication, a website |
-| `DugDocument` | `"document"` | One file in one format (README, protocol, paper PDF, data XLSX, ...), with the same citation fields as a `DugResource`; holds no text itself |
-| `DugContent` | `"content"` | A headed piece of a `DugDocument`'s text, held in `content`; the only element with text, present only under a licence that allows it |
+| `DugResource` | `"resource"` | Anything external with a URL, at any size, in a tree: a website, a deposit, a publication, and each file of one (`file_name`, `mime_type`); holds no text itself |
+| `DugContent` | `"content"` | A headed piece of a `DugResource`'s text, held in `content`; the only element with text, present only under a licence that allows it |
 
 ## Development
 

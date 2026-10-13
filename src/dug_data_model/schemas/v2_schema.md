@@ -6,7 +6,6 @@ This document describes the data model schema in a human-readable format.
 
 - [DugConcept](#dugconcept)
 - [DugContent](#dugcontent)
-- [DugDocument](#dugdocument)
 - [DugResource](#dugresource)
 - [DugSection](#dugsection)
 - [DugStudy](#dugstudy)
@@ -40,20 +39,27 @@ ontology CURIEs) and knowledge-graph query results.
 
 ## DugContent
 
-A piece of a `DugDocument`'s text: a heading and the body under it.
+A piece of a `DugResource`'s text: a heading and the body under it.
 
-Content is the only element that holds a document's text. A `DugDocument` describes and
-links to a file; if the file's text can be read, and the document's licence allows the
-text to be incorporated, it is split into DugContent children, one per heading (or a
-single one when there are no headings). `name` is the heading and `content` is the text
-under it. `description` is metadata about the piece, as on every other element, and is
-usually empty. `parents` holds the ID of the containing document, with `parent_type` set
-to 'document'.
+Content is the only element that holds text. A `DugResource` describes and links to a
+file; if the file's text can be read, and the resource's licence allows the text to be
+incorporated, it is split into DugContent children, one per heading (or a single one
+when there are no headings). `name` is the heading and `content` is the text under it.
+`description` is metadata about the piece, as on every other element, and is usually
+empty. `parents` holds the ID of the resource the text came from, with `parent_type`
+'resource' (anything else is rejected); `studies` holds the ID of the study, as on
+`DugResource`, so that the study can be found without climbing through the resource.
 
 Content carries no licence or display flag of its own: the licence is stated once, on the
-document, and content exists only when that licence permits it (see `licenses.py`). A
-document whose text may not be incorporated has no content, so the case shows in the
-shape of the data rather than in a flag that an index or a UI has to remember to honour.
+resource, and content exists only when that licence permits it (see `licenses.py`). A
+file whose text may not be incorporated has no content, so the case shows in the shape
+of the data rather than in a flag that an index or a UI has to remember to honour.
+
+Content is a separate element, not a list inside its resource, because Dug annotates and
+indexes each element on its own: a section is sent to the annotator as one bounded text
+and comes back as its own search hit, with `page` and `position` to point at. Embedded
+in the resource, the text would be annotated as one PDF-sized string, or not at all, and
+returned whole with every hit on the resource (see docs/how-dug-uses-elements.md).
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -70,60 +76,11 @@ shape of the data rather than in a flag that an index or a UI has to remember to
 | `optional_terms` | `list[str]` | No | - |  |
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
-| `position` | `int` | No | `0` | 0-based order of this content within its document. |
+| `position` | `int` | No | `0` | 0-based order of this content within its resource. |
 | `level` | `int` | No | `None` | Heading depth (1 = top level) when the source format exposes it. |
 | `page` | `int` | No | `None` | 1-based page this content starts on, for paginated formats. |
 | `content` | `str` | Yes | - | The text under the heading. Required, so that a file written when the text was held in `description` fails to load instead of loading with no text. |
-
-## DugDocument
-
-One file in one format: a README, a protocol PDF, a paper's PDF, a data XLSX, ...
-
-A `DugResource` is the thing with a URL (a deposit, a publication, a web page); a document
-is one file of it. Its parent is that resource or, when it came from no known resource,
-its study. Like a resource, a document has a title (`name`), a summary (`description`), a
-landing or download URL (`action`), and the citation fields `repository`, `authors`, `doi`
-and `license`, which both get from `DugCitable`; it adds what only a file has:
-`file_name`, `mime_type` and `document_type`. A web page captured as text is a document
-with `mime_type="text/html"` and no `file_name`, under the page's resource. A document is
-not a resource: `isinstance(x, DugResource)` is false for it, so code that picks out
-deposits by class does not pick up their files too.
-
-A document holds no text of its own. Whatever could be read out of the file lives in its
-`DugContent` children (`content_list`), so that every piece of text is searchable and
-annotatable in the same way. The document's `license` decides whether there is any
-content at all: a producer emits content only when the licence allows the text to be
-incorporated (`can_include_content()` in `licenses.py`). A document is still a document
-when it has no content, whether because its text could not be read -- a scanned PDF, or a
-file the curator named that no parser handles -- or because its licence does not allow
-it: it is listed and linked to, and found by its title and description. Whether a producer
-emits a document for every file in a deposit, or only for the ones a person would read, is
-the producer's choice: the reference producer inventories data files (recordings, scans,
-spreadsheets of primary data) in the resource's `metadata` and emits no document for them.
-
-| Field | Type | Required | Default | Description |
-|-------|------|----------|---------|-------------|
-| `id` | `str` | Yes | - |  |
-| `name` | `str` | Yes | - |  |
-| `description` | `str` | Yes | - |  |
-| `type` | `"document"` | No | `"document"` |  |
-| `programs` | `list[str]` | No | - |  |
-| `action` | `str` | No | `""` |  |
-| `parents` | `list[str]` | No | - |  |
-| `parent_type` | `str` | No | `""` |  |
-| `concepts` | `dict[str, object]` | No | - |  |
-| `search_terms` | `list[str]` | No | - |  |
-| `optional_terms` | `list[str]` | No | - |  |
-| `metadata` | `dict[str, any]` | No | - |  |
-| `tags` | `list[dict[str, str]]` | No | - |  |
-| `repository` | `str` | No | `""` | Slug of the repository hosting this item; recommended values are listed in REPOSITORY_KINDS. |
-| `authors` | `list[str]` | No | - | Author names in citation order. |
-| `doi` | `str` | No | `""` | Bare DOI of this item, without a resolver prefix; empty when unknown. |
-| `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. |
-| `file_name` | `str` | No | `""` | Original file name, e.g. 'README.pdf'. |
-| `mime_type` | `str` | No | `""` | IANA media type, e.g. 'application/pdf'. |
-| `document_type` | `str` | No | `""` | Kind of document; recommended values are listed in DOCUMENT_KINDS. |
-| `content_list` | `list[str]` | No | - | IDs of this document's DugContent, in reading order. |
+| `studies` | `list[str]` | No | - | IDs of the studies this content belongs to, as on DugResource. |
 
 ## DugResource
 
@@ -131,17 +88,40 @@ Anything outside Dug that has a URL, at whatever size.
 
 A program website, a project's page on an NIH site, a press release, a Zenodo community,
 the Zenodo or Figshare deposit a study's files came from, a dataset with or without a DOI,
-a publication: each is a resource. `name` is its title, `description` its description,
-`action` its landing page; a resource with a DOI is citable. The dividing line from a
-`DugDocument` is format: a resource is the thing, a document is one file of it in one
-format. A deposit's README, a paper's PDF, a dataset's XLSX and the HTML of a press release
-are documents, which share the citation fields (`repository`, `authors`, `doi`, `license`)
-through `DugCitable` but are not resources.
+a publication; and each file of any of these: the deposit's README, the paper's PDF, the
+dataset's XLSX, the HTML of the press release. `name` is its title, `description` its
+description, `action` its landing or download page. `resource_type` says what it is (see
+`RESOURCE_KINDS`); `repository`, `authors`, `doi` and `license` say where it is published
+and how to cite it. A resource that is one file in one format also has `file_name` and
+`mime_type`; a landing page has neither, and a web page captured as text has
+`mime_type="text/html"` and no `file_name`. A UI renders every resource the same way --
+a title, a link, a kind and a format -- in a tree or in a flat list.
 
-A resource's parent is its study or, for a deposit in a Zenodo community or a page on a
-website, the enclosing resource (`parent_type="resource"`), which lists it in its
-`resource_list`. The study's own `resource_list` lists every resource in the study either
-way, so a consumer that starts from the study never has to climb.
+Resources form a tree. A resource's parent is its study (`parent_type="study"`) or the
+resource it is part of (`parent_type="resource"`): a file hangs off the deposit it was
+downloaded from, a deposit off its Zenodo community, a press release page off the project
+website, a supplementary table off the paper. A file that came from no known resource
+hangs off the study. A resource lists nothing: its children name it in `parents`, and
+`studies` names the study from any depth. So a UI that shows only the resources whose
+parent is the study loses nothing, and one that follows `parents` can show the whole
+tree. A resource with the wrong parent is found by `studies` and by search, but shown in
+the wrong place.
+
+A resource holds no text of its own. Whatever can be read out of a file lives in its
+`DugContent` children, under the file's `license`: a producer emits content only when
+`can_include_content(resource.license)` is true (see `licenses.py`), so a file whose text
+could not be read -- a scanned PDF, a format no parser handles -- or may not be
+incorporated is a resource with no content, still listed, linked to, and found by its
+title and description. Whether a producer emits a resource for every file in a deposit
+or only for the ones a person would read is its choice: the reference producer
+inventories data files in the deposit's `metadata` and emits no resource for them.
+
+Earlier versions had a separate `DugDocument` type for a file, with a `DugCitable` base
+class for the fields it shared with `DugResource`. Every awkward case -- a press release
+page captured as text, a PDF report with a DOI of its own, a document hanging off a study
+because no deposit was known -- came from drawing that line, and a UI had to render two
+types; one type in a tree needs neither. A file written with `"type": "document"` does
+not load.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|
@@ -158,13 +138,14 @@ way, so a consumer that starts from the study never has to climb.
 | `optional_terms` | `list[str]` | No | - |  |
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
-| `repository` | `str` | No | `""` | Slug of the repository hosting this item; recommended values are listed in REPOSITORY_KINDS. |
+| `resource_type` | `str` | No | `""` | Kind of resource; recommended values are listed in RESOURCE_KINDS. A file that is its parent in one format has its parent's kind. |
+| `repository` | `str` | No | `""` | Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
-| `doi` | `str` | No | `""` | Bare DOI of this item, without a resolver prefix; empty when unknown. |
-| `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. |
-| `resource_type` | `str` | No | `"dataset"` | Kind of resource; recommended values are listed in RESOURCE_KINDS. |
-| `document_list` | `list[str]` | No | - | IDs of the DugDocuments that came from this resource. |
-| `resource_list` | `list[str]` | No | - | IDs of the DugResources inside this one, e.g. the deposits in a community. |
+| `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |
+| `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. Governs the DugContent under it. |
+| `file_name` | `str` | No | `""` | Original file name when the resource is one file, e.g. 'README.pdf'; empty for a landing page. |
+| `mime_type` | `str` | No | `""` | IANA media type when the resource is one file, e.g. 'application/pdf'; empty for a landing page. |
+| `studies` | `list[str]` | No | - | IDs of the studies this resource belongs to, at any depth below them; `parents` names only the element directly above. |
 
 ## DugSection
 
@@ -190,14 +171,14 @@ way, so a consumer that starts from the study never has to climb.
 
 A research study.
 
-A study does not list its resources and documents; they name it in `parents`, and
-`build_parent_map()` or a query on `parents` finds them. That is because the study and
-its resources need not come from the same producer (DUG-796: the non-data-dictionary
-producer emits resources and documents for a study the MDS ingest emits), so a list on
-the study would be complete only by luck. Its publications are `DugResource`s with
-`resource_type` 'publication' or 'preprint'. Earlier versions had `publications`, a list
-of bare strings nothing read, then `document_list` and `resource_list`; a file that still
-carries any of them loads without it.
+A study does not list its resources; they name it in `parents`, and `build_parent_map()`
+or a query on `parents` finds them, while `studies` on every resource and content element
+under the study finds them all at once. That is because the study and its resources need
+not come from the same producer (DUG-796: the non-data-dictionary producer emits resources
+for a study the MDS ingest emits), so a list on the study would be complete only by luck.
+Its publications are `DugResource`s with `resource_type` 'publication' or 'preprint'.
+Earlier versions had `publications`, a list of bare strings nothing read, then
+`document_list` and `resource_list`; a file that still carries any of them loads without it.
 
 | Field | Type | Required | Default | Description |
 |-------|------|----------|---------|-------------|

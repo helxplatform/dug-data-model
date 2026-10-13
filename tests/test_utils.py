@@ -203,9 +203,10 @@ class TestCompactDump:
         content = compact_dump(DugContent(id="d/h", name="H", description="", content="t"))
         assert content["position"] == 0
         assert "level" not in content and "parents" not in content
+        variable = compact_dump(DugVariable(id="v", name="V", description=""))
+        assert variable["data_type"] == "text"
         resource = compact_dump(DugResource(id="r", name="R", description=""))
-        assert resource["resource_type"] == "dataset"
-        assert "repository" not in resource
+        assert "resource_type" not in resource and "repository" not in resource
 
     def test_keeps_an_emptied_field_whose_default_is_not_empty(self):
         variable = DugVariable(id="v", name="V", description="", data_type="")

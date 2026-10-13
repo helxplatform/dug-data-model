@@ -51,7 +51,7 @@ class MissingReferenceError(ValueError):
 
 
 class InconsistentReferenceError(ValueError):
-    """Raised when references resolve but disagree with each other.
+    """Raised when references resolve but point at the wrong kind of element.
 
     `problems` holds one sentence per problem, as `find_inconsistent_references()` returns them.
     """
@@ -106,8 +106,8 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
     """Find IDs that elements refer to but that are not in the collection.
 
     An element refers to others through the fields marked with `References`: `parents`, and
-    in v2 `variable_list`, `section_list`, `document_list`, `resource_list` and `content_list`
-    (the last three on resources and documents; a study does not list its resources).
+    in v2 `variable_list`, `section_list` and `studies`. Nothing lists its children: a study
+    does not list its resources, nor a resource its documents, nor a document its content.
 
     Args:
         elements: An iterable of DugElement objects.
@@ -128,17 +128,15 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
 
 
 def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
-    """Find references that resolve but point at the wrong kind of element or disagree.
+    """Find references that resolve but point at the wrong kind of element.
 
-    Two things are checked, both as declared by each field's `References` marker:
+    Each referenced element must have the `type` that its field's `References` marker
+    declares: `element_type`, or for `parents` the element's `parent_type` (not checked when
+    that is empty). IDs that do not resolve are left to `find_missing_references()`.
 
-    - Each referenced element has the expected `type`: `element_type`, or for `parents` the
-      element's `parent_type` (not checked when that is empty).
-    - Parents and `children` lists agree in both directions: a listed child names the listing
-      element in its `parents`, and an element is listed by every parent that has a `children`
-      list for its type.
-
-    IDs that do not resolve are left to `find_missing_references()`.
+    An earlier version also checked that a `children` list and its members' `parents` agreed
+    in both directions. Those lists are gone (a child names its parent; nothing lists its
+    children), so there is nothing left to disagree.
 
     Args:
         elements: An iterable of DugElement objects.
@@ -151,32 +149,23 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     for elem in by_id.values():
         for field_name, marker in _reference_fields(type(elem)):
             expected = marker.element_type or (getattr(elem, marker.type_from) if marker.type_from else "")
+            if not expected:
+                continue
             for ref in getattr(elem, field_name):
                 target = by_id.get(ref)
-                if target is None:
-                    continue
-                if expected and target.type != expected:
+                if target is not None and target.type != expected:
                     problems.append(
                         f"{elem.id}: {field_name} names {ref}, a {target.type or 'untyped element'}, "
                         f"not a {expected}"
                     )
-                if marker.children and elem.id not in target.parents:
-                    problems.append(f"{elem.id}: {field_name} lists {ref}, whose parents do not include it")
-        for parent_id in elem.parents:
-            parent = by_id.get(parent_id)
-            if parent is None:
-                continue
-            for field_name, marker in _reference_fields(type(parent)):
-                if marker.children and marker.element_type == elem.type and elem.id not in getattr(parent, field_name):
-                    problems.append(f"{elem.id}: names {parent_id} as a parent, but its {field_name} does not list it")
     return problems
 
 
 def validate_references(elements: Iterable[DugElement]) -> None:
     """Validate that every `References` field points at the right elements in the collection.
 
-    First that every referenced ID is in the collection, then that the references are
-    consistent (see `find_inconsistent_references()`). This is opt-in rather than part of
+    First that every referenced ID is in the collection, then that each points at the right
+    kind of element (see `find_inconsistent_references()`). This is opt-in rather than part of
     loading, because a producer may legitimately split related elements across several files.
 
     Args:
@@ -184,8 +173,7 @@ def validate_references(elements: Iterable[DugElement]) -> None:
 
     Raises:
         MissingReferenceError: If any referenced ID is not in the collection.
-        InconsistentReferenceError: If a reference points at the wrong type of element, or a
-            parent and its `children` list disagree.
+        InconsistentReferenceError: If a reference points at the wrong type of element.
     """
     all_elements = list(elements)
     missing = find_missing_references(all_elements)
