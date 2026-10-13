@@ -21,6 +21,7 @@ import json
 from pathlib import Path
 
 import pytest
+
 from dug_data_model.v2 import (
     CONTENT_TYPE,
     RESOURCE_TYPE,
