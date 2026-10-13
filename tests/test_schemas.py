@@ -23,3 +23,13 @@ def test_committed_json_schema_is_up_to_date():
 def test_committed_markdown_schema_is_up_to_date():
     committed = (SCHEMAS / "v2_schema.md").read_text()
     assert committed == generate_markdown_schema(v2.DugElementParsedList, title=TITLE)
+
+
+def test_markdown_table_rows_survive_a_union_of_literals():
+    # The test above passes again once the schemas are regenerated, so a broken generator
+    # would get through with them: an unescaped `"" | "study" | "resource"` in the type
+    # column splits the row into more cells.
+    md = generate_markdown_schema(v2.DugElementParsedList, title=TITLE)
+    (row,) = [line for line in md.splitlines() if '"study"' in line and "`parent_type`" in line]
+    assert '`"" \\| "study" \\| "resource"`' in row
+    assert row.replace("\\|", "").count("|") == 6  # five cells
