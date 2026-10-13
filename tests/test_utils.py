@@ -3,6 +3,7 @@
 import json
 
 import pytest
+from dug_data_model import scaffold
 from dug_data_model.v2 import (
     DugConcept,
     DugVariable,
@@ -197,6 +198,10 @@ class TestCompactDump:
     def test_keeps_type_even_though_it_is_a_default(self):
         dumped = compact_dump(DugStudy(id="S", name="Study", description=""))
         assert dumped == {"id": "S", "type": "study", "name": "Study", "description": ""}
+
+    def test_keeps_type_where_its_default_is_empty(self):
+        dumped = scaffold.compact_dump(scaffold.DugElement(id="e", name="E", description=""))
+        assert dumped == {"id": "e", "type": "", "name": "E", "description": ""}
 
     def test_writes_defaults_that_say_something(self):
         # An order or a kind must not change meaning if a later model changes its default.

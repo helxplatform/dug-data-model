@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -72,10 +73,11 @@ def compact_dump(element: DugElement) -> dict[str, Any]:
     default and that default is empty (`""`, `[]`, `{}` or `None`), as is the computed
     `ml_ready_desc`, which repeats the description. Loading the result through
     `DugElementParsedList` restores every omitted field. A field whose default says
-    something -- `position=0`, `data_type="text"`, `type` -- is
-    always written, so that a file keeps its meaning if a later model changes that default.
-    (`exclude_defaults=True` was tried first and dropped those too.) `id`, `type` and `name`
-    come first so the file scans top-down. `ml_ready_desc` is also left out of the concepts in `concepts`,
+    something -- `position=0`, `data_type="text"` -- is always written, so that a file keeps
+    its meaning if a later model changes that default. (`exclude_defaults=True` was tried first
+    and dropped those too.) `type` is always written, even where its default is empty, as on
+    the scaffold's `DugElement`, because it is what a file is loaded back by. `id`, `type` and
+    `name` come first so the file scans top-down. `ml_ready_desc` is also left out of the concepts in `concepts`,
     the only base field that holds other elements, and of the concepts in theirs, at any depth.
 
     This dumps in Python mode, like `serialize_elements()`'s default path, so that objects
@@ -83,8 +85,7 @@ def compact_dump(element: DugElement) -> dict[str, Any]:
     `complex_handler()`. `mode="json"` would make pydantic raise on them instead.
     """
     dumped = element.model_dump(exclude=_compact_exclude(element))
-    dumped.pop("type", None)
-    return {"id": dumped.pop("id"), "type": element.type, "name": dumped.pop("name"), **dumped}
+    return {"id": dumped.pop("id"), "type": dumped.pop("type"), "name": dumped.pop("name"), **dumped}
 
 
 def _is_empty(value: Any) -> bool:
@@ -100,15 +101,29 @@ def _compact_exclude(element: DugElement) -> dict[str, Any]:
     one level down.
     """
     exclude: dict[str, Any] = {"ml_ready_desc": True}
-    for name, field in type(element).model_fields.items():
-        default = field.get_default(call_default_factory=True)
-        if _is_empty(default) and getattr(element, name) == default:
+    for name, default in _empty_defaults(type(element)):
+        if getattr(element, name) == default:
             exclude[name] = True
     if "concepts" not in exclude:
         exclude["concepts"] = {
             key: _compact_exclude(concept) for key, concept in element.concepts.items()
         }
     return exclude
+
+
+@cache
+def _empty_defaults(cls: type[DugElement]) -> tuple[tuple[str, Any], ...]:
+    """Return the name and default of each of *cls*'s fields whose default is empty.
+
+    `type` is left out, since `compact_dump()` always writes it. The defaults are built once
+    per class rather than once per element, and are only compared against, never handed out,
+    so sharing a `[]` between calls is safe.
+    """
+    return tuple(
+        (name, default)
+        for name, field in cls.model_fields.items()
+        if name != "type" and _is_empty(default := field.get_default(call_default_factory=True))
+    )
 
 
 def serialize_elements(
