@@ -202,6 +202,24 @@ class TestInconsistentReferences:
         v2 = DugVariable(id="v2", name="B", description="")
         validate_references([study, v1, v2])
 
+    def test_every_element_sharing_an_id_is_checked(self):
+        # Only the last element with a given ID used to be checked, so a bad parent on an
+        # earlier one went unseen.
+        study, document, _ = _document_tree()
+        bad = DugVariable(id="x", name="X", description="", parents=["s1"], parent_type="section")
+        good = DugVariable(id="x", name="X", description="", parents=["s1"], parent_type="study")
+        assert find_inconsistent_references([study, document, bad, good]) == [
+            "x: parents names s1, a study, not a section",
+        ]
+
+    def test_validate_rejects_duplicate_ids_first(self):
+        study, document, content = _document_tree()
+        twin = DugResource(id="d1", name="Doc again", description="", parents=["s1"],
+                           parent_type="study")
+        with pytest.raises(DuplicateIdError) as exc_info:
+            validate_references([study, document, content, twin])
+        assert exc_info.value.duplicate_ids == {"d1": 2}
+
     def test_validate_raises_on_inconsistency(self):
         study, document, content = _document_tree()
         content.parents = ["s1"]

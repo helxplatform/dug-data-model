@@ -1,7 +1,7 @@
 """Validation utilities for the Dug data model.
 
-This module provides functions for validating collections of DugElement objects,
-including uniqueness checks.
+This module provides functions for validating collections of DugElement objects:
+that their IDs are unique, and that the IDs they refer to resolve to the right elements.
 """
 
 from __future__ import annotations
@@ -11,10 +11,12 @@ from functools import cache
 from typing import TYPE_CHECKING
 
 from .base import References
-from .utils import get_all_ids
+from .utils import group_by_id
 
 if TYPE_CHECKING:
     from .base import DugElement
+
+_Index = dict[str, list["DugElement"]]
 
 
 class DuplicateIdError(ValueError):
@@ -107,7 +109,7 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
 
     An element refers to others through the fields marked with `References`: `parents`, and
     in v2 `variable_list`, `section_list` and `studies`. Nothing lists its children: a study
-    does not list its resources, nor a resource its documents, nor a document its content.
+    does not list its resources, nor a resource the resources or content under it.
 
     Args:
         elements: An iterable of DugElement objects.
@@ -117,12 +119,15 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
         missing. Empty dict if every reference resolves.
     """
     all_elements = list(elements)
-    known_ids = get_all_ids(all_elements)
+    return _missing_references(all_elements, group_by_id(all_elements))
+
+
+def _missing_references(elements: list[DugElement], by_id: _Index) -> dict[str, set[str]]:
     missing: dict[str, set[str]] = {}
-    for elem in all_elements:
+    for elem in elements:
         for field_name, _ in _reference_fields(type(elem)):
             for ref in getattr(elem, field_name):
-                if ref not in known_ids:
+                if ref not in by_id:
                     missing.setdefault(field_name, set()).add(ref)
     return missing
 
@@ -132,7 +137,9 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
 
     Each referenced element must have the `type` that its field's `References` marker
     declares: `element_type`, or for `parents` the element's `parent_type` (not checked when
-    that is empty). IDs that do not resolve are left to `find_missing_references()`.
+    that is empty). IDs that do not resolve are left to `find_missing_references()`. Every
+    element is checked, even one that shares its ID with another; a reference to a shared ID
+    must suit every element that has it.
 
     An earlier version also checked that a `children` list and its members' `parents` agreed
     in both directions. Those lists are gone (a child names its parent; nothing lists its
@@ -144,44 +151,54 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     Returns:
         One sentence per problem, naming the element at fault. Empty list if none.
     """
-    by_id = {elem.id: elem for elem in elements}
+    all_elements = list(elements)
+    return _inconsistent_references(all_elements, group_by_id(all_elements))
+
+
+def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[str]:
     problems: list[str] = []
-    for elem in by_id.values():
+    for elem in elements:
         for field_name, marker in _reference_fields(type(elem)):
             expected = marker.element_type or (getattr(elem, marker.type_from) if marker.type_from else "")
             if not expected:
                 continue
             for ref in getattr(elem, field_name):
-                target = by_id.get(ref)
-                if target is not None and target.type != expected:
-                    problems.append(
-                        f"{elem.id}: {field_name} names {ref}, a {target.type or 'untyped element'}, "
-                        f"not a {expected}"
-                    )
+                for target in by_id.get(ref, ()):
+                    if target.type != expected:
+                        problems.append(
+                            f"{elem.id}: {field_name} names {ref}, a {target.type or 'untyped element'}, "
+                            f"not a {expected}"
+                        )
     return problems
 
 
 def validate_references(elements: Iterable[DugElement]) -> None:
     """Validate that every `References` field points at the right elements in the collection.
 
-    First that every referenced ID is in the collection, then that each points at the right
-    kind of element (see `find_inconsistent_references()`). This is opt-in rather than part of
+    First that no two elements share an ID, since a reference to a shared ID is ambiguous;
+    then that every referenced ID is in the collection, and that each points at the right kind
+    of element (see `find_inconsistent_references()`). This is opt-in rather than part of
     loading, because a producer may legitimately split related elements across several files.
 
     Args:
         elements: An iterable of DugElement objects.
 
     Raises:
+        DuplicateIdError: If two elements share an ID.
         MissingReferenceError: If any referenced ID is not in the collection.
         InconsistentReferenceError: If a reference points at the wrong type of element.
     """
     all_elements = list(elements)
-    missing = find_missing_references(all_elements)
+    by_id = group_by_id(all_elements)
+    duplicates = {id_: len(elems) for id_, elems in by_id.items() if len(elems) > 1}
+    if duplicates:
+        raise DuplicateIdError(duplicates)
+    missing = _missing_references(all_elements, by_id)
     if missing:
         all_missing = set().union(*missing.values())
         raise MissingReferenceError(
             all_missing, reference_type="/".join(sorted(missing)), by_field=missing
         )
-    problems = find_inconsistent_references(all_elements)
+    problems = _inconsistent_references(all_elements, by_id)
     if problems:
         raise InconsistentReferenceError(problems)
