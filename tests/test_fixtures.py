@@ -8,13 +8,8 @@ Min Gon Kim, Kai Yu, Bin He et al. and Kai Yu, Samantha Schmitt, Bin He et al. (
 Mellon University). It is a frozen example of the shape, refreshed when the model changes,
 not a contract with that producer.
 
-It started as a copy of the producer's examples/HDP00009/HDP00009.json (commit 8b52af1, on
-its model-conventions branch) and has been edited by hand since to follow the model: text
-moved from content's `description` to `content`; the study's and the deposits' child lists
-went; and the READMEs, written as `DugDocument`s, became `DugResource`s with a `file_name`
-and `mime_type` under their deposits, with `studies` on everything below the study. The
-producer has not caught up yet: once it emits this shape, replace the file with its output
-and drop this paragraph.
+It is a copy of the producer's examples/HDP00009/HDP00009.json (its one-resource-type
+branch, 2026-10-13); refresh it when that file changes.
 """
 
 import json
