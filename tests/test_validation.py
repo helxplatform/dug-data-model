@@ -314,6 +314,24 @@ class TestInconsistentReferences:
             "d1: type is 'study', not one of 'resource'"
         )
 
+    def test_parents_that_go_round_in_a_cycle(self):
+        a = DugResource(id="a", name="A", description="", parents=["b"], parent_type="resource")
+        b = DugResource(id="b", name="B", description="", parents=["a"], parent_type="resource")
+        own = DugResource(id="own", name="O", description="", parents=["own"],
+                          parent_type="resource")
+        assert find_inconsistent_references([a, b, own]) == [
+            "a: parents lead back to a (a -> b -> a)",
+            "own: parents lead back to own (own -> own)",
+        ]
+
+    def test_shared_ancestors_are_not_a_cycle(self):
+        # Two paths up to the same study meet, but never return to where they began.
+        study, document, content = _document_tree()
+        other = DugResource(id="d2", name="D2", description="", parents=["s1"],
+                            parent_type="study", studies=["s1"], license="CC-BY-4.0")
+        content.parents = ["d1", "d2"]
+        assert find_inconsistent_references([study, document, other, content]) == []
+
     def test_validate_raises_on_inconsistency(self):
         study, document, content = _document_tree()
         content.parents = ["s1"]

@@ -6,7 +6,7 @@ that their IDs are unique, and that the IDs they refer to resolve to the right e
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from functools import cache
 from typing import TYPE_CHECKING, Literal, get_args, get_origin
 
@@ -163,7 +163,7 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     such as `studies`, must name exactly what the element's parents imply: the parents of its
     `element_type`, and whatever the same field names on the other parents. A field marked
     `FromParents`, such as content's `license`, must equal the same field on each parent that
-    has it. Every
+    has it. Nor may `parents` go round in a cycle, which no tree can contain. Every
     element is checked, even one that shares its ID with another; a reference to a shared ID
     must suit every element that has it.
 
@@ -219,6 +219,42 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
                             f"{elem.id}: {field_name} is {value!r}, but its parent {parent.id} has "
                             f"{getattr(parent, field_name)!r}"
                         )
+    problems.extend(_parent_cycles(by_id))
+    return problems
+
+
+def _parent_cycles(by_id: _Index) -> list[str]:
+    """Return one problem per cycle in `parents`, named after the element it returns to.
+
+    A depth-first walk up `parents`, iterative so that a deep tree cannot hit the recursion
+    limit. An element is grey while the walk is above it and black once everything above it
+    is done, so reaching a grey element again means the walk has gone round a cycle.
+    """
+    grey, black = 1, 2
+    state: dict[str, int] = {}
+    problems: list[str] = []
+
+    def parents_of(id_: str) -> Iterator[str]:
+        return iter([p for elem in by_id[id_] for p in elem.parents if p in by_id])
+
+    for start in by_id:
+        if start in state:
+            continue
+        state[start] = grey
+        path = [start]
+        stack = [parents_of(start)]
+        while stack:
+            parent = next(stack[-1], None)
+            if parent is None:
+                state[path.pop()] = black
+                stack.pop()
+            elif parent not in state:
+                state[parent] = grey
+                path.append(parent)
+                stack.append(parents_of(parent))
+            elif state[parent] == grey:
+                cycle = path[path.index(parent):] + [parent]
+                problems.append(f"{parent}: parents lead back to {parent} ({' -> '.join(cycle)})")
     return problems
 
 
