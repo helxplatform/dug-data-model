@@ -152,8 +152,10 @@ def _missing_references(elements: list[DugElement], by_id: _Index) -> dict[str, 
 def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     """Find references that resolve but point at the wrong kind of element.
 
-    Each referenced element must have the `type` that its field's `References` marker
-    declares: `element_type`, or for `parents` the element's `parent_type`. An element that
+    Every element's `type` must be one its class allows, so that an element whose `type` was
+    changed after loading cannot pass for another kind. Each referenced element must have the
+    `type` that its field's `References` marker declares: `element_type`, or for `parents`
+    the element's `parent_type`. An element that
     names parents must say what type they are, and when its class narrows `parent_type` to a
     `Literal`, the value must be one it allows. Loading enforces that too, but pydantic does
     not validate assignment, so an element changed after it was built is caught here. IDs
@@ -182,17 +184,15 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
 def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[str]:
     problems: list[str] = []
     for elem in elements:
+        if problem := _not_allowed(elem, "type"):
+            problems.append(problem)
         for field_name, marker in _reference_fields(type(elem)):
             refs = getattr(elem, field_name)
             expected = marker.element_type
             if marker.type_from:
                 expected = getattr(elem, marker.type_from)
-                allowed = _literal_values(type(elem), marker.type_from)
-                if allowed is not None and expected not in allowed:
-                    problems.append(
-                        f"{elem.id}: {marker.type_from} is {expected!r}, not one of "
-                        f"{', '.join(repr(v) for v in sorted(map(str, allowed)))}"
-                    )
+                if problem := _not_allowed(elem, marker.type_from):
+                    problems.append(problem)
                     continue
                 if refs and not expected:
                     problems.append(f"{elem.id}: {field_name} is set but {marker.type_from} is empty")
@@ -220,6 +220,19 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
                             f"{getattr(parent, field_name)!r}"
                         )
     return problems
+
+
+def _not_allowed(elem: DugElement, field_name: str) -> str:
+    """Return a problem if *elem*'s *field_name* is outside the `Literal` its class declares.
+
+    Loading enforces the `Literal`, but pydantic does not validate assignment, so a value
+    set afterwards is only caught here.
+    """
+    allowed = _literal_values(type(elem), field_name)
+    value = getattr(elem, field_name)
+    if allowed is None or value in allowed:
+        return ""
+    return f"{elem.id}: {field_name} is {value!r}, not one of {', '.join(repr(v) for v in sorted(map(str, allowed)))}"
 
 
 def _inherited_problem(elem: DugElement, field_name: str, element_type: str, by_id: _Index) -> str:

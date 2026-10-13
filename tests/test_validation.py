@@ -306,6 +306,14 @@ class TestInconsistentReferences:
         loose = DugContent(id="c2", name="C", description="", license="", content="")
         assert find_inconsistent_references([content, loose]) == []
 
+    def test_a_type_assigned_after_loading_is_checked(self):
+        # Otherwise a resource renamed to "study" would satisfy a reference to a study.
+        study, document, content = _document_tree()
+        document.type = "study"
+        assert find_inconsistent_references([study, document, content])[0] == (
+            "d1: type is 'study', not one of 'resource'"
+        )
+
     def test_validate_raises_on_inconsistency(self):
         study, document, content = _document_tree()
         content.parents = ["s1"]
