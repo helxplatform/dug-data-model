@@ -87,7 +87,7 @@ KG answer objects should have:
     - ``get_node_synonyms()``: Method returning list of node synonyms
 """
 
-from .base import DugElement, References
+from .base import DugElement, FromParents, References
 from .concept import CONCEPT_TYPE, DugConcept
 from .types import InputFile
 from .utils import (
@@ -124,6 +124,7 @@ DugConcept.model_rebuild()
 __all__ = [
     # Core classes
     "DugElement",
+    "FromParents",
     "References",
     "DugConcept",
     # Constants

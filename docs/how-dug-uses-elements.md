@@ -37,8 +37,8 @@ one Elasticsearch document.
   `data_type`, `metadata` (a dynamic object, so anything goes under it) and `tags` (nested
   `category`/`value`). `parents` and `programs` are text with a `.keyword` sub-field;
   `element_type` is a keyword. Every field this model adds -- `resource_type`,
-  `repository`, `authors`, `doi`, `license`, `file_name`, `mime_type`, `studies`, `content`,
-  `position`, `level`, `page` -- needs a mapping before an element carrying it can be
+  `repository`, `authors`, `doi`, `license` (on resources and content), `file_name`,
+  `mime_type`, `studies`, `content`, `position`, `level`, `page` -- needs a mapping before an element carrying it can be
   indexed, in an extended mapping or a new index. `metadata` is the one place a producer can
   put a new key without a Dug change, which is why the reference producer keeps a file
   inventory, a PubMed ID and related identifiers there.

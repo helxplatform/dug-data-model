@@ -83,8 +83,8 @@ def _document_tree():
     return [
         DugStudy(id="s1", name="Study", description="desc"),
         DugResource(id="d1", name="Doc", description="", mime_type="application/pdf",
-                    parents=["s1"], parent_type="study", studies=["s1"]),
-        DugContent(id="d1/a", name="A", description="", content="text",
+                    parents=["s1"], parent_type="study", studies=["s1"], license="CC-BY-4.0"),
+        DugContent(id="d1/a", name="A", description="", license="CC-BY-4.0", content="text",
                    parents=["d1"], parent_type="resource", studies=["s1"]),
     ]
 
@@ -182,7 +182,8 @@ class TestInconsistentReferences:
     def test_content_under_a_study_is_caught_without_a_parent_type(self):
         # parent_type defaults to 'resource', so leaving it out still checks the parent.
         study = DugStudy(id="s1", name="Study", description="desc")
-        content = DugContent(id="c", name="C", description="", content="", parents=["s1"],
+        content = DugContent(id="c", name="C", description="",
+                             license="CC-BY-4.0", content="", parents=["s1"],
                              studies=["s1"])
         assert find_inconsistent_references([study, content]) == [
             "c: parents names s1, a study, not a resource",
@@ -279,8 +280,31 @@ class TestInconsistentReferences:
     def test_studies_are_not_checked_without_parents_or_with_one_missing(self):
         study = DugStudy(id="s1", name="Study", description="desc")
         orphan = DugResource(id="r", name="R", description="", studies=["s1"])
-        stray = DugContent(id="c", name="C", description="", content="", parents=["gone"])
+        stray = DugContent(id="c", name="C", description="",
+                           license="CC-BY-4.0", content="", parents=["gone"])
         assert find_inconsistent_references([study, orphan, stray]) == []
+
+    def test_content_licence_must_match_its_resource(self):
+        study, document, content = _document_tree()
+        content.license = "CC0-1.0"
+        assert find_inconsistent_references([study, document, content]) == [
+            "d1/a: license is 'CC0-1.0', but its parent d1 has 'CC-BY-4.0'",
+        ]
+
+    def test_content_licence_is_checked_against_every_parent(self):
+        study, document, content = _document_tree()
+        other = DugResource(id="d2", name="Other", description="", parents=["s1"],
+                            parent_type="study", studies=["s1"], license="CC0-1.0")
+        content.parents = ["d1", "d2"]
+        assert find_inconsistent_references([study, document, other, content]) == [
+            "d1/a: license is 'CC-BY-4.0', but its parent d2 has 'CC0-1.0'",
+        ]
+
+    def test_content_licence_is_not_checked_without_a_resolved_parent(self):
+        content = DugContent(id="c", name="C", description="", license="CC0-1.0", content="",
+                             parents=["gone"])
+        loose = DugContent(id="c2", name="C", description="", license="", content="")
+        assert find_inconsistent_references([content, loose]) == []
 
     def test_validate_raises_on_inconsistency(self):
         study, document, content = _document_tree()

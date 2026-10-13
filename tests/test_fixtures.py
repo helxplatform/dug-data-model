@@ -9,7 +9,8 @@ Mellon University). It is a frozen example of the shape, refreshed when the mode
 not a contract with that producer.
 
 It is a copy of the producer's examples/HDP00009/HDP00009.json (its one-resource-type
-branch, 2026-10-13); refresh it when that file changes.
+branch, 2026-10-13), with `license` added by hand to the two content elements, copied from
+their files, until the producer writes it; refresh it when that file changes.
 """
 
 import json

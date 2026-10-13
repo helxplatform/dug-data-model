@@ -10,7 +10,7 @@ from collections.abc import Iterable
 from functools import cache
 from typing import TYPE_CHECKING, Literal, get_args, get_origin
 
-from .base import References
+from .base import FromParents, References
 from .utils import group_by_id
 
 if TYPE_CHECKING:
@@ -105,6 +105,16 @@ def _reference_fields(cls: type[DugElement]) -> tuple[tuple[str, References], ..
 
 
 @cache
+def _from_parents_fields(cls: type[DugElement]) -> tuple[str, ...]:
+    """Return the names of *cls*'s fields that carry the `FromParents` marker."""
+    return tuple(
+        name
+        for name, field in cls.model_fields.items()
+        if any(isinstance(marker, FromParents) for marker in field.metadata)
+    )
+
+
+@cache
 def _literal_values(cls: type[DugElement], field_name: str) -> frozenset[object] | None:
     """Return the values *cls*'s field allows if it is a `Literal`, else None."""
     annotation = cls.model_fields[field_name].annotation
@@ -149,7 +159,9 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     not validate assignment, so an element changed after it was built is caught here. IDs
     that do not resolve are left to `find_missing_references()`. A field marked `inherited`,
     such as `studies`, must name exactly what the element's parents imply: the parents of its
-    `element_type`, and whatever the same field names on the other parents. Every
+    `element_type`, and whatever the same field names on the other parents. A field marked
+    `FromParents`, such as content's `license`, must equal the same field on each parent that
+    has it. Every
     element is checked, even one that shares its ID with another; a reference to a shared ID
     must suit every element that has it.
 
@@ -198,6 +210,15 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
                 problem = _inherited_problem(elem, field_name, marker.element_type, by_id)
                 if problem:
                     problems.append(problem)
+        for field_name in _from_parents_fields(type(elem)):
+            value = getattr(elem, field_name)
+            for parent_id in elem.parents:
+                for parent in by_id.get(parent_id, ()):
+                    if field_name in type(parent).model_fields and getattr(parent, field_name) != value:
+                        problems.append(
+                            f"{elem.id}: {field_name} is {value!r}, but its parent {parent.id} has "
+                            f"{getattr(parent, field_name)!r}"
+                        )
     return problems
 
 

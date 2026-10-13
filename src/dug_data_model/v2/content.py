@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal, override
 
 from pydantic import Field, computed_field
 
-from .base import DugElement, References
+from .base import DugElement, FromParents, References
 
 CONTENT_TYPE = "content"
 
@@ -22,10 +22,13 @@ class DugContent(DugElement):
     of the study, as on `DugResource`, so that the study can be found without climbing
     through the resource.
 
-    Content carries no licence or display flag of its own: the licence is stated once, on the
-    resource, and content exists only when that licence permits it (see `licenses.py`). A
-    file whose text may not be incorporated has no content, so the case shows in the shape
-    of the data rather than in a flag that an index or a UI has to remember to honour.
+    Content exists only when its resource's licence permits it (see `licenses.py`): a file
+    whose text may not be incorporated has no content, so the case shows in the shape of the
+    data rather than in a flag that an index or a UI has to remember to honour. `license` is
+    a copy of that licence, not a gate: Dug indexes and returns each element on its own, so
+    a content hit carries the terms of its text, for attribution, without a lookup through
+    `parents`. It is required, and `validate_references()` checks that it equals each
+    parent's, so that the copy cannot drift from the resource it came from.
 
     Content is a separate element, not a list inside its resource, because Dug annotates and
     indexes each element on its own: a section is sent to the annotator as one bounded text
@@ -56,6 +59,12 @@ class DugContent(DugElement):
         default_factory=list,
         description="IDs of the studies this content belongs to, as on DugResource.",
     )
+    license: Annotated[str, FromParents()] = Field(
+        description=(
+            "The licence of the resource this text came from, copied so that each hit carries "
+            "it; must equal the parent's `license`."
+        )
+    )
 
     @override
     @computed_field
@@ -75,4 +84,5 @@ class DugContent(DugElement):
             "page": self.page,
             "content": self.content,
             "studies": self.studies,
+            "license": self.license,
         }

@@ -110,7 +110,8 @@ class TestDugSection:
 
 class TestDugContent:
     def test_default_type(self):
-        c = DugContent(id="d1/intro", name="Intro", description="", content="Text")
+        c = DugContent(id="d1/intro", name="Intro", description="",
+                       license="CC-BY-4.0", content="Text")
         assert c.type == CONTENT_TYPE
 
     def test_text_is_required(self):
@@ -118,19 +119,26 @@ class TestDugContent:
         with pytest.raises(ValidationError):
             DugContent(id="d1/intro", name="Intro", description="Text")
 
-    def test_has_no_display_flag_or_licence_of_its_own(self):
+    def test_has_no_display_flag(self):
         assert "can_display_content" not in DugContent.model_fields
-        assert "license" not in DugContent.model_fields
+
+    def test_licence_is_required(self):
+        # A copy of the resource's licence, so a hit carries the terms of its text.
+        with pytest.raises(ValidationError, match="license"):
+            DugContent(id="d1/intro", name="Intro", description="", content="Text")
 
     def test_its_parent_is_a_resource(self):
-        DugContent(id="r/h", name="H", description="", content="t", parents=["r"],
+        DugContent(id="r/h", name="H", description="",
+                   license="CC-BY-4.0", content="t", parents=["r"],
                    parent_type="resource")
-        content = DugContent(id="r/h", name="H", description="", content="t", parents=["r"])
+        content = DugContent(id="r/h", name="H", description="",
+                             license="CC-BY-4.0", content="t", parents=["r"])
         assert content.parent_type == "resource"
         # Empty is rejected too: it used to be let through, and then nothing checked the parent.
         for parent_type in ("document", ""):
             with pytest.raises(ValidationError, match="parent_type"):
-                DugContent(id="r/h", name="H", description="", content="t", parents=["d"],
+                DugContent(id="r/h", name="H", description="",
+                           license="CC-BY-4.0", content="t", parents=["d"],
                            parent_type=parent_type)
 
     @pytest.mark.parametrize("name, content, expected", [
@@ -139,19 +147,22 @@ class TestDugContent:
         ("", "We did things.", "We did things."),
     ])
     def test_ml_ready_desc_joins_heading_and_text(self, name, content, expected):
-        c = DugContent(id="d1/intro", name=name, description="ignored", content=content)
+        c = DugContent(id="d1/intro", name=name, description="ignored",
+                       license="CC-BY-4.0", content=content)
         assert c.ml_ready_desc == expected
 
     def test_level_and_page_are_one_based(self):
-        DugContent(id="x", name="x", description="", content="x", level=1, page=1)
+        DugContent(id="x", name="x", description="",
+                   license="CC-BY-4.0", content="x", level=1, page=1)
 
     @pytest.mark.parametrize("bad", [{"position": -1}, {"level": 0}, {"page": 0}])
     def test_out_of_range_position_level_or_page_rejected(self, bad):
         with pytest.raises(ValidationError):
-            DugContent(id="x", name="x", description="", content="x", **bad)
+            DugContent(id="x", name="x", description="", license="CC-BY-4.0", content="x", **bad)
 
     def test_searchable_and_response_dicts_carry_the_text(self):
-        c = DugContent(id="d1/intro", name="Intro", description="", content="Text",
+        c = DugContent(id="d1/intro", name="Intro", description="",
+                       license="CC-BY-4.0", content="Text",
                        position=2, level=1, page=3, studies=["s1"])
         es = c.get_searchable_dict()
         assert es["element_type"] == "content"
@@ -160,6 +171,7 @@ class TestDugContent:
         assert es["level"] == 1
         assert es["page"] == 3
         assert es["content"] == "Text"
+        assert es["license"] == "CC-BY-4.0"
         assert es["description"] == ""
         assert "can_display_content" not in es
         assert c.get_response_dict()["content"] == "Text"
@@ -325,7 +337,7 @@ class TestDugElementParsedList:
             {"id": "sec1", "name": "section1", "description": "desc", "type": "section"},
             {"id": "r1", "name": "resource1", "description": "desc", "type": "resource"},
             {"id": "r1/s", "name": "heading", "description": "", "content": "text",
-             "type": "content"},
+             "license": "CC-BY-4.0", "type": "content"},
         ]
         elements = DugElementParsedList.validate_python(data)
         types = {e.type for e in elements}
@@ -368,8 +380,9 @@ class TestDugElementParsedList:
                         studies=["s1"]),
             DugResource(id="r1/readme", name="README", description="", resource_type="readme",
                         mime_type="application/pdf", parents=["r1"], parent_type="resource",
-                        studies=["s1"]),
-            DugContent(id="r1/readme/intro", name="Intro", description="", content="Text",
+                        studies=["s1"], license="CC-BY-4.0"),
+            DugContent(id="r1/readme/intro", name="Intro", description="",
+                       license="CC-BY-4.0", content="Text",
                        position=0, page=1, parents=["r1/readme"], parent_type="resource",
                        studies=["s1"]),
         ]

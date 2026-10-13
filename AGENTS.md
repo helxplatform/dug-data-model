@@ -12,7 +12,8 @@ Notes for agents and people. The README is the reference; this is what is easy t
   the README's "Shapes that were tried and dropped" says why.
 - **`tests/fixtures/heal_hdp00009.json` is a real producer output**, a copy of
   heal-non-data-dictionaries' `examples/HDP00009/HDP00009.json` (`tests/test_fixtures.py`
-  says which branch and when). Keep it loading through `validate_references()` and
+  says which branch and when), hand-edited to add `license` to its content until the producer
+  copies it. Keep it loading through `validate_references()` and
   round-tripping through `compact_dump()`; a model change that breaks it needs the producer
   changed too, or the fixture refreshed from it.
 - **Dug consumes these elements one at a time with strict index mappings.** Before adding a

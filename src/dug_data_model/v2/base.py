@@ -50,6 +50,19 @@ class References:
     inherited: bool = False
 
 
+@dataclass(frozen=True)
+class FromParents:
+    """Marks a field that repeats the same field on each of the element's parents.
+
+    A copy lets an element that Dug indexes and returns on its own carry what it needs from
+    its parent, as v2's `DugContent.license` carries its resource's licence. Copies can drift,
+    so `validate_references()` reports each resolved parent that has the field with a
+    different value::
+
+        license: Annotated[str, FromParents()] = Field(...)
+    """
+
+
 class DugElement(BaseModel):
     """Base class for any object that should be searchable via Dug.
 

@@ -120,7 +120,7 @@ that every `parents`, `studies`, `variable_list` and `section_list` ID resolves 
 points at the right type of element, and that each element's `studies` names exactly what its
 parents imply: the studies it hangs off directly, and the `studies` of the resources it hangs
 off. A content element whose `studies` was left empty fails, since a filter on `studies`
-would not find it.
+would not find it, and so does one whose `license` differs from its resource's.
 
 Which file is "the" publication? The child whose `resource_type` matches its parent's: the
 PDF of a `publication` is a `publication` with `mime_type="application/pdf"`, a protocol's PDF
@@ -182,6 +182,7 @@ section = DugContent(
     position=0, page=1,
     parents=[readme.id], parent_type="resource",
     studies=["HDP00009"],
+    license=readme.license,                  # a copy, so that a hit carries the terms of its text
 )
 
 preprint = DugResource(
@@ -206,14 +207,17 @@ study = DugStudy(
 )   # the study lists nothing: its resources name it in `parents` and `studies`
 ```
 
-Text is only ever incorporated under a licence that allows it, and the licence is stated once,
-on the resource. A producer emits `DugContent` for a file only when
-`can_include_content(resource.license)` is true; the licences that count are listed in
-`CONTENT_LICENSES`, so that every producer draws the line in the same place, and NonCommercial
-and NoDerivatives licences are left for a person to decide. So if content exists, its text may
-be indexed and shown, and nothing downstream has to check a flag. A file whose licence does
-not allow it is still a resource, with its `license` and no content: it is found by its title
-and description, and the UI sends the user to `action` to read it at the source. A file whose
+Text is only ever incorporated under a licence that allows it. A producer emits `DugContent`
+for a file only when `can_include_content(resource.license)` is true; the licences that count
+are listed in `CONTENT_LICENSES`, so that every producer draws the line in the same place, and
+NonCommercial and NoDerivatives licences are left for a person to decide. So if content exists,
+its text may be indexed and shown, and nothing downstream has to check a flag. Each content
+element also carries a copy of the licence in its own `license`, because Dug indexes and
+returns elements one at a time: a content hit then states the terms of its text, for
+attribution, without a lookup through `parents`. The copy is required, and
+`validate_references()` checks that it equals the resource's. A file whose licence does not
+allow it is still a resource, with its `license` and no content: it is found by its title and
+description, and the UI sends the user to `action` to read it at the source. A file whose
 format nothing can read is a resource with no content in the same way.
 
 `resource_type` is a free string; `RESOURCE_KINDS` lists the recommended values, coarse on
@@ -243,7 +247,12 @@ Recorded so that the next person does not go the same way.
   on the resource; a separate element is annotated as one bounded section and is its own hit.
 - **Text behind a `can_display_content` flag** on the content, with every document's text in
   the index. That stated permission without enforcing it, since Dug's endpoints return the
-  indexed `_source` as is; now content exists only when the licence allows it.
+  indexed `_source` as is; now content exists only when the licence allows it. The `license`
+  that content now carries is not that flag come back: it is a statement about the text,
+  checked against the resource, and nothing reads it to decide whether to show the text.
+- **Content with no licence of its own**, the licence stated once on the resource. A content
+  hit could not show its terms without a second lookup, which Dug cannot make while indexing
+  one element at a time, and content with no parent, or two, had no clear licence at all.
 
 #### Reference producer conventions
 
@@ -268,7 +277,8 @@ not schema: nothing here is validated. (The producer still writes the previous s
   was downloaded from. Each content element copies its resource's `action`.
 - **Licence.** A file takes its own curated licence, else its deposit's, else a study-level
   default; its text becomes content only when `can_include_content(resource.license)` is
-  true, else the file is emitted with no content. A resource whose source states that it has
+  true, else the file is emitted with no content; each content element copies its file's
+  `license`. A resource whose source states that it has
   no licence (OSF's "No license") carries `license="NONE"`, SPDX's value for "no licence
   declared"; an empty `license` means nobody has checked.
 - **`metadata` keys.** On a deposit: `files = {"count": N, "bytes": B, "by_extension":

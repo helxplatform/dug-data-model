@@ -51,10 +51,13 @@ empty. `parents` holds the ID of the resource the text came from, and `parent_ty
 of the study, as on `DugResource`, so that the study can be found without climbing
 through the resource.
 
-Content carries no licence or display flag of its own: the licence is stated once, on the
-resource, and content exists only when that licence permits it (see `licenses.py`). A
-file whose text may not be incorporated has no content, so the case shows in the shape
-of the data rather than in a flag that an index or a UI has to remember to honour.
+Content exists only when its resource's licence permits it (see `licenses.py`): a file
+whose text may not be incorporated has no content, so the case shows in the shape of the
+data rather than in a flag that an index or a UI has to remember to honour. `license` is
+a copy of that licence, not a gate: Dug indexes and returns each element on its own, so
+a content hit carries the terms of its text, for attribution, without a lookup through
+`parents`. It is required, and `validate_references()` checks that it equals each
+parent's, so that the copy cannot drift from the resource it came from.
 
 Content is a separate element, not a list inside its resource, because Dug annotates and
 indexes each element on its own: a section is sent to the annotator as one bounded text
@@ -82,6 +85,7 @@ returned whole with every hit on the resource (see docs/how-dug-uses-elements.md
 | `page` | `int` | No | `None` | 1-based page this content starts on, for paginated formats. |
 | `content` | `str` | Yes | - | The text under the heading. Required, so that a file written when the text was held in `description` fails to load instead of loading with no text. |
 | `studies` | `list[str]` | No | - | IDs of the studies this content belongs to, as on DugResource. |
+| `license` | `str` | Yes | - | The licence of the resource this text came from, copied so that each hit carries it; must equal the parent's `license`. |
 
 ## DugResource
 
