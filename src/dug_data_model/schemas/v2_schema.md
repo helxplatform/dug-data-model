@@ -143,7 +143,7 @@ not load.
 | `repository` | `str` | No | `""` | Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
 | `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |
-| `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); empty when unknown. Governs the DugContent under it. |
+| `license` | `str` | No | `""` | SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); 'NONE' when the source declares no licence, and empty only when nobody has checked. Governs the DugContent under it. |
 | `file_name` | `str` | No | `""` | Original file name when the resource is one file, e.g. 'README.pdf'; empty for a landing page. |
 | `mime_type` | `str` | No | `""` | IANA media type when the resource is one file, e.g. 'application/pdf'; empty for a landing page. |
 | `studies` | `list[str]` | No | - | IDs of the studies this resource belongs to, at any depth below them; `parents` names only the element directly above. |

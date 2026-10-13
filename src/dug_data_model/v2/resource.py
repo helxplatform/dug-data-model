@@ -129,7 +129,8 @@ class DugResource(DugElement):
     license: str = Field(
         "",
         description="SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not "
-        "list (e.g. all rights reserved); empty when unknown. Governs the DugContent under it.",
+        "list (e.g. all rights reserved); 'NONE' when the source declares no licence, and empty "
+        "only when nobody has checked. Governs the DugContent under it.",
     )
     file_name: str = Field(
         "",
