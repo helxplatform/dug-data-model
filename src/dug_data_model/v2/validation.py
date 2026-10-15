@@ -133,20 +133,25 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
 def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     """Find references that resolve but point at the wrong kind of element.
 
-    Every element's `type` must be one its class allows, so that an element whose `type` was
-    changed after loading cannot pass for another kind. Each referenced element must have the
-    `type` that its field's `References` marker declares: `element_type`, or for `parents`
-    the element's `parent_type`. An element that
-    names parents must say what type they are, and when its class narrows `parent_type` to a
-    `Literal`, the value must be one it allows. Loading enforces that too, but pydantic does
-    not validate assignment, so an element changed after it was built is caught here. IDs
-    that do not resolve are left to `find_missing_references()`. A field marked `inherited`,
-    such as `studies`, must name exactly what the element's parents imply: the parents of its
-    `element_type`, and whatever the same field names on the other parents. A field marked
-    `FromParents`, such as content's `license`, must equal the same field on each parent that
-    has it. Nor may `parents` go round in a cycle, which no tree can contain. Every
-    element is checked, even one that shares its ID with another; a reference to a shared ID
-    must suit every element that has it.
+    Each rule below has its own function in this module:
+
+    - Every element's `type` must be one its class allows, so that an element whose `type`
+      was changed after loading cannot pass for another kind (`_not_allowed()`).
+    - Each referenced element must have the `type` that its field's `References` marker
+      declares: `element_type`, or for `parents` the element's `parent_type`. An element that
+      names parents must say what type they are, and when its class narrows `parent_type` to
+      a `Literal`, the value must be one it allows (`_reference_field_problems()`).
+    - A field marked `inherited`, such as `studies`, must name exactly what the element's
+      parents imply: the parents of its `element_type`, and whatever the same field names on
+      the other parents (`_inherited_problem()`).
+    - A field marked `FromParents`, such as content's `license`, must equal the same field on
+      each parent that has it (`_from_parents_problems()`).
+    - `parents` may not go round in a cycle, which no tree can contain (`_parent_cycles()`).
+
+    Loading enforces the `Literal` types too, but pydantic does not validate assignment, so
+    an element changed after it was built is caught here. IDs that do not resolve are left to
+    `find_missing_references()`. Every element is checked, even one that shares its ID with
+    another; a reference to a shared ID must suit every element that has it.
 
     An earlier version also checked that a `children` list and its members' `parents` agreed
     in both directions. Those lists are gone (a child names its parent; nothing lists its
@@ -214,38 +219,8 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
         if problem := _not_allowed(elem, "type"):
             problems.append(problem)
         for field_name, marker in _reference_fields(type(elem)):
-            refs = getattr(elem, field_name)
-            expected = marker.element_type
-            if marker.type_from:
-                expected = getattr(elem, marker.type_from)
-                if problem := _not_allowed(elem, marker.type_from):
-                    problems.append(problem)
-                    continue
-                if refs and not expected:
-                    problems.append(f"{elem.id}: {field_name} is set but {marker.type_from} is empty")
-                    continue
-            if not expected:
-                continue
-            for ref in refs:
-                for target in by_id.get(ref, ()):
-                    if target.type != expected:
-                        problems.append(
-                            f"{elem.id}: {field_name} names {ref}, a {target.type or 'untyped element'}, "
-                            f"not a {expected}"
-                        )
-            if marker.inherited:
-                problem = _inherited_problem(elem, field_name, marker.element_type, by_id)
-                if problem:
-                    problems.append(problem)
-        for field_name in _from_parents_fields(type(elem)):
-            value = getattr(elem, field_name)
-            for parent_id in elem.parents:
-                for parent in by_id.get(parent_id, ()):
-                    if field_name in type(parent).model_fields and getattr(parent, field_name) != value:
-                        problems.append(
-                            f"{elem.id}: {field_name} is {value!r}, but its parent {parent.id} has "
-                            f"{getattr(parent, field_name)!r}"
-                        )
+            problems.extend(_reference_field_problems(elem, field_name, marker, by_id))
+        problems.extend(_from_parents_problems(elem, by_id))
     problems.extend(_parent_cycles(by_id))
     return problems
 
@@ -253,6 +228,52 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
 # ---------------------------------------------------------------------------
 # The rules that find_inconsistent_references() applies
 # ---------------------------------------------------------------------------
+
+def _reference_field_problems(
+    elem: DugElement, field_name: str, marker: References, by_id: _Index
+) -> list[str]:
+    """Return the problems with one of *elem*'s `References` fields.
+
+    The field's `type_from`, if it has one, is checked first, and a bad or empty value there
+    stops the field's other checks, since they would only repeat it: then that each resolved
+    target has the expected type, and that an `inherited` field names what the parents imply.
+    """
+    refs = getattr(elem, field_name)
+    expected = marker.element_type
+    if marker.type_from:
+        expected = getattr(elem, marker.type_from)
+        if problem := _not_allowed(elem, marker.type_from):
+            return [problem]
+        if refs and not expected:
+            return [f"{elem.id}: {field_name} is set but {marker.type_from} is empty"]
+    if not expected:
+        return []
+    problems = [
+        f"{elem.id}: {field_name} names {ref}, a {target.type or 'untyped element'}, not a {expected}"
+        for ref in refs
+        for target in by_id.get(ref, ())
+        if target.type != expected
+    ]
+    if marker.inherited:
+        if problem := _inherited_problem(elem, field_name, marker.element_type, by_id):
+            problems.append(problem)
+    return problems
+
+
+def _from_parents_problems(elem: DugElement, by_id: _Index) -> list[str]:
+    """Return a problem for each resolved parent whose copy of a `FromParents` field differs."""
+    problems: list[str] = []
+    for field_name in _from_parents_fields(type(elem)):
+        value = getattr(elem, field_name)
+        for parent_id in elem.parents:
+            for parent in by_id.get(parent_id, ()):
+                if field_name in type(parent).model_fields and getattr(parent, field_name) != value:
+                    problems.append(
+                        f"{elem.id}: {field_name} is {value!r}, but its parent {parent.id} has "
+                        f"{getattr(parent, field_name)!r}"
+                    )
+    return problems
+
 
 def _not_allowed(elem: DugElement, field_name: str) -> str:
     """Return a problem if *elem*'s *field_name* is outside the `Literal` its class declares.
