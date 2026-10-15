@@ -9,40 +9,41 @@ from .base import DugElement, References
 RESOURCE_TYPE = "resource"
 
 RESOURCE_KINDS: tuple[str, ...] = (
-    "dataset",
-    "software",
+    # Published works
     "publication",
     "preprint",
-    "website",
-    "press_release",
-    "readme",
-    "protocol",
-    "manual",
-    "methods",
     "report",
     "poster",
     "presentation",
     "patent",
-    "supplementary_table",
+    # Data and code
+    "dataset",
     "data",
+    "supplementary_table",
+    "software",
+    # Documentation
+    "readme",
+    "protocol",
+    "methods",
+    "manual",
+    # On the web
+    "website",
+    "press_release",
+    # Anything else
     "other",
 )
 """Recommended values for `DugResource.resource_type`: what the resource is, whether it is a
 landing page or a file.
 
-A free string, like `DugVariable.data_type`, so that a new kind does not need a model
-release; producers should prefer these. The list is coarse on purpose: a finer kind, such as
-one of PubMed's publication types ("Review", "Randomized Controlled Trial"), belongs in
-`tags` as `{"category": "publication_type", "value": ...}`, which an index can filter on.
+What each one means, how to choose between neighbours (a preprint or a publication, data or a
+dataset), and how to map DataCite and Crossref types onto them is in `docs/resource-kinds.md`,
+which has a heading per kind in this order; `tests/test_model.py` checks that they agree.
 
-A file that is its parent in one format has its parent's kind: the PDF of a publication is
-a `publication` with `mime_type="application/pdf"` under the `publication` that is the work,
-and a protocol's PDF is a `protocol` under the protocol. A file that is something of its own
--- a `supplementary_table` under a publication, a `readme` under a dataset -- has its own
-kind. So "the full text" needs no field of its own: it is the child whose kind matches its
-parent's. ('article' was that child's kind when a file was a separate `DugDocument` type,
-and went with it.) 'data' is a data file (a spreadsheet, an archive, a recording) that a
-producer chose to emit as a resource rather than only count in its deposit's inventory.
+A free string, like `DugVariable.data_type`, so that a new kind does not need a model
+release; producers should prefer these. The list is coarse on purpose: a finer kind belongs
+in `tags`. A file that is its parent in one format has its parent's kind, so the PDF of a
+publication is a `publication`. ('article' was that file's kind when a file was a separate
+`DugDocument` type, and went with it.)
 """
 
 REPOSITORY_KINDS: tuple[str, ...] = (
@@ -114,7 +115,8 @@ class DugResource(DugElement):
 
     resource_type: str = Field(
         "",
-        description="Kind of resource; recommended values are listed in RESOURCE_KINDS. A file "
+        description="Kind of resource; recommended values and what each means are in "
+        "https://github.com/helxplatform/dug-data-model/blob/main/docs/resource-kinds.md. A file "
         "that is its parent in one format has its parent's kind.",
     )
     repository: str = Field(

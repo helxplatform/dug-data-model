@@ -143,7 +143,7 @@ not load.
 | `optional_terms` | `list[str]` | No | - |  |
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
-| `resource_type` | `str` | No | `""` | Kind of resource; recommended values are listed in RESOURCE_KINDS. A file that is its parent in one format has its parent's kind. |
+| `resource_type` | `str` | No | `""` | Kind of resource; recommended values and what each means are in https://github.com/helxplatform/dug-data-model/blob/main/docs/resource-kinds.md. A file that is its parent in one format has its parent's kind. |
 | `repository` | `str` | No | `""` | Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS. |
 | `authors` | `list[str]` | No | - | Author names in citation order. |
 | `doi` | `str` | No | `""` | Bare DOI of this resource, without a resolver prefix; empty when unknown. |

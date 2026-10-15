@@ -341,7 +341,7 @@
         },
         "resource_type": {
           "default": "",
-          "description": "Kind of resource; recommended values are listed in RESOURCE_KINDS. A file that is its parent in one format has its parent's kind.",
+          "description": "Kind of resource; recommended values and what each means are in https://github.com/helxplatform/dug-data-model/blob/main/docs/resource-kinds.md. A file that is its parent in one format has its parent's kind.",
           "title": "Resource Type",
           "type": "string"
         },

@@ -1,5 +1,8 @@
 """Tests for dug_data_model.v2.model"""
 
+import re
+from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 
@@ -196,6 +199,11 @@ class TestDugResource:
         r = DugResource(id="r1", name="Dataset", description="A dataset")
         assert r.resource_type == ""
         assert "dataset" in RESOURCE_KINDS
+
+    def test_every_kind_has_a_heading_in_the_docs_in_the_same_order(self):
+        # docs/resource-kinds.md says what each kind means; the tuple is only the list.
+        doc = (Path(__file__).parent.parent / "docs" / "resource-kinds.md").read_text()
+        assert re.findall(r"^### `(\w+)`$", doc, re.M) == list(RESOURCE_KINDS)
 
     def test_recommended_kinds_are_not_enforced(self):
         assert "readme" in RESOURCE_KINDS
