@@ -10,9 +10,9 @@ The public API, re-exported from the package:
 - `validate_references()`, which runs all three checks and raises `DuplicateIdError`,
   `MissingReferenceError` or `InconsistentReferenceError`
 
-The private helpers below them are grouped by what they do. Before scanning `model_fields`
-for the `References` or `FromParents` markers again, look under "Reading the markers off a
-class" at the bottom.
+The private helpers below them are grouped by what they do. The fields of a class that carry
+the `References` or `FromParents` marker come from `References.fields_of()` and
+`FromParents.fields_of()` in `base.py`.
 
 This is one module, sectioned, rather than several: the scaffold copies it into every version
 and `tests/test_scaffold_copies.py` checks the copies match, so each extra file would be one
@@ -211,7 +211,7 @@ def _duplicate_ids(by_id: _Index) -> dict[str, int]:
 def _missing_references(elements: list[DugElement], by_id: _Index) -> dict[str, set[str]]:
     missing: dict[str, set[str]] = {}
     for elem in elements:
-        for field_name, _ in _reference_fields(type(elem)):
+        for field_name, _ in References.fields_of(type(elem)):
             for ref in getattr(elem, field_name):
                 if ref not in by_id:
                     missing.setdefault(field_name, set()).add(ref)
@@ -223,7 +223,7 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
     for elem in elements:
         if problem := _not_allowed(elem, "type"):
             problems.append(problem)
-        for field_name, marker in _reference_fields(type(elem)):
+        for field_name, marker in References.fields_of(type(elem)):
             problems.extend(_reference_field_problems(elem, field_name, marker, by_id))
         problems.extend(_from_parents_problems(elem, by_id))
     problems.extend(_parent_cycles(by_id))
@@ -268,7 +268,7 @@ def _reference_field_problems(
 def _from_parents_problems(elem: DugElement, by_id: _Index) -> list[str]:
     """Return a problem for each resolved parent whose copy of a `FromParents` field differs."""
     problems: list[str] = []
-    for field_name in _from_parents_fields(type(elem)):
+    for field_name in FromParents.fields_of(type(elem)):
         value = getattr(elem, field_name)
         for parent_id in elem.parents:
             for parent in by_id.get(parent_id, ()):
@@ -354,29 +354,8 @@ def _parent_cycles(by_id: _Index) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
-# Reading the markers off a class
+# Reading a class's fields
 # ---------------------------------------------------------------------------
-
-@cache
-def _reference_fields(cls: type[DugElement]) -> tuple[tuple[str, References], ...]:
-    """Return the name and `References` marker of each of *cls*'s fields that hold IDs."""
-    return tuple(
-        (name, marker)
-        for name, field in cls.model_fields.items()
-        for marker in field.metadata
-        if isinstance(marker, References)
-    )
-
-
-@cache
-def _from_parents_fields(cls: type[DugElement]) -> tuple[str, ...]:
-    """Return the names of *cls*'s fields that carry the `FromParents` marker."""
-    return tuple(
-        name
-        for name, field in cls.model_fields.items()
-        if any(isinstance(marker, FromParents) for marker in field.metadata)
-    )
-
 
 @cache
 def _literal_values(cls: type[DugElement], field_name: str) -> frozenset[object] | None:

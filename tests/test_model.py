@@ -6,8 +6,11 @@ from pathlib import Path
 import pytest
 from pydantic import ValidationError
 
+from dug_data_model import scaffold
 from dug_data_model.v2 import (
     DugElement,
+    FromParents,
+    References,
     DugConcept,
     DugVariable,
     DugStudy,
@@ -271,6 +274,14 @@ class TestDugResource:
 # ---------------------------------------------------------------------------
 
 class TestDugElement:
+    def test_markers_list_the_fields_that_carry_them(self):
+        assert [name for name, _ in References.fields_of(DugResource)] == ["parents", "studies"]
+        assert References.fields_of(DugResource)[1][1] == References("study", inherited=True)
+        assert FromParents.fields_of(DugContent) == ("license",)
+        assert FromParents.fields_of(DugResource) == ()
+        # The scaffold's copy of base.py has them too, so a generated version does.
+        assert [name for name, _ in scaffold.References.fields_of(scaffold.DugElement)] == ["parents"]
+
     def test_add_parent(self):
         v = DugVariable(id="v1", name="var", description="desc")
         v.add_parent("study_1")

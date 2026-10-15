@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from functools import cache
 from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
@@ -49,6 +50,20 @@ class References:
     type_from: str = ""
     inherited: bool = False
 
+    @staticmethod
+    @cache
+    def fields_of(model: type[BaseModel]) -> tuple[tuple[str, References], ...]:
+        """Return the name and marker of each of *model*'s fields that carries `References`.
+
+        Worked out once per class, so call it rather than scanning `model_fields` again.
+        """
+        return tuple(
+            (name, marker)
+            for name, field in model.model_fields.items()
+            for marker in field.metadata
+            if isinstance(marker, References)
+        )
+
 
 @dataclass(frozen=True)
 class FromParents:
@@ -61,6 +76,16 @@ class FromParents:
 
         license: Annotated[str, FromParents()] = Field(...)
     """
+
+    @staticmethod
+    @cache
+    def fields_of(model: type[BaseModel]) -> tuple[str, ...]:
+        """Return the names of *model*'s fields that carry `FromParents`, once per class."""
+        return tuple(
+            name
+            for name, field in model.model_fields.items()
+            if any(isinstance(marker, FromParents) for marker in field.metadata)
+        )
 
 
 class DugElement(BaseModel):
