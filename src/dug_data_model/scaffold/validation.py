@@ -13,6 +13,10 @@ The public API, re-exported from the package:
 The private helpers below them are grouped by what they do. Before scanning `model_fields`
 for the `References` or `FromParents` markers again, look under "Reading the markers off a
 class" at the bottom.
+
+This is one module, sectioned, rather than several: the scaffold copies it into every version
+and `tests/test_scaffold_copies.py` checks the copies match, so each extra file would be one
+more copy to keep in step.
 """
 
 from __future__ import annotations
