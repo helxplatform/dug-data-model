@@ -76,7 +76,7 @@ publications, project websites. Two element types describe them:
   deposit a study's files came from, a dataset with or without a DOI, a publication or
   preprint, and each file of any of these: the deposit's README, the paper's PDF, the
   dataset's XLSX, the HTML of the press release. `resource_type` says what it is (see
-  `RESOURCE_KINDS`); `repository`, `authors`, `doi` and `license` say where it is published
+  [docs/resource-kinds.md](docs/resource-kinds.md)); `repository`, `authors`, `doi` and `license` say where it is published
   and how to cite it. A resource that is one file in one format also has `file_name` and
   `mime_type`; a landing page has neither. A resource holds **no text of its own**.
 - **`DugContent`** — a piece of a resource's text: a heading (`name`) and the body under it
@@ -122,11 +122,9 @@ parents imply: the studies it hangs off directly, and the `studies` of the resou
 off. A content element whose `studies` was left empty fails, since a filter on `studies`
 would not find it, and so does one whose `license` differs from its resource's.
 
-Which file is "the" publication? The child whose `resource_type` matches its parent's: the
-PDF of a `publication` is a `publication` with `mime_type="application/pdf"`, a protocol's PDF
-is a `protocol`. A file that is something of its own under the same parent -- a
-`supplementary_table`, a `readme` -- has its own kind. There is no flag for this, and no
-`article` kind: the convention covers every kind of resource the same way.
+Which file is "the" publication? The child whose `resource_type` matches its parent's, with
+a `mime_type`; there is no flag for it. [docs/resource-kinds.md](docs/resource-kinds.md#a-files-kind)
+gives the rule, and what each kind means.
 
 The example below is HEAL study [HDP00009](https://healdata.org/portal/discovery/HDP00009)
 in the shape the reference producer (see below) writes; the whole record is in
@@ -221,11 +219,8 @@ description, and the UI sends the user to `action` to read it at the source. A f
 format nothing can read is a resource with no content in the same way.
 
 `resource_type` is a free string; `RESOURCE_KINDS` lists the recommended values, coarse on
-purpose. A finer kind, such as one of PubMed's
-[publication types](https://pubmed.ncbi.nlm.nih.gov/help/#publication-types) ("Review",
-"Randomized Controlled Trial"), belongs in `tags` as `{"category": "publication_type", "value":
-...}`, which every element has and which an index can filter on, rather than in a longer
-`RESOURCE_KINDS`.
+purpose, and [docs/resource-kinds.md](docs/resource-kinds.md) says what each means, where a
+finer kind goes instead, and how to map DataCite and Crossref types onto them.
 
 #### Shapes that were tried and dropped
 

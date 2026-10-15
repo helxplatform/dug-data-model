@@ -15,6 +15,9 @@ Notes for agents and people. The README is the reference; this is what is easy t
   says which branch and when). Keep it loading through `validate_references()` and
   round-tripping through `compact_dump()`; a model change that breaks it needs the producer
   changed too, or the fixture refreshed from it.
+- **What each `RESOURCE_KINDS` value means is in `docs/resource-kinds.md`**, not the code.
+  Adding, removing or reordering a kind means changing both; `tests/test_model.py` fails
+  unless the doc's `###` headings are exactly the tuple, in order.
 - **Dug consumes these elements one at a time with strict index mappings.** Before adding a
   field for the index's sake, read `docs/how-dug-uses-elements.md`.
 - `pytest` and `mypy src` are the checks; mypy has long-standing errors in `base.py` and
