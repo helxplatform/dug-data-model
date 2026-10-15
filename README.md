@@ -260,8 +260,7 @@ The model leaves several things to the producer. These are the conventions of th
 producer,
 [heal-non-data-dictionaries](https://github.com/heal-data-stewards/heal-non-data-dictionaries),
 recorded so that a second producer, or a UI, does not have to reinvent or guess them. They are
-not schema: nothing here is validated. (The producer still writes the previous shape, with
-`DugDocument`; this is the shape it is being moved to.)
+not schema: nothing here is validated.
 
 - **IDs.** A resource with a URL is `<study>/resources/<url-slug>` (the URL's host and path,
   lower-cased, non-alphanumerics collapsed to `-`), or `<parent resource>/<url-slug>` when it
@@ -274,7 +273,9 @@ not schema: nothing here is validated. (The producer still writes the previous s
   producer does not do this yet, as it works one study at a time.
 - **`action`.** A resource with a URL links to its landing page. A file links to an explicit
   curated URL, else `https://doi.org/<doi>` when it has its own DOI, else the deposit URL it
-  was downloaded from. Each content element copies its resource's `action`.
+  was downloaded from. Each content element copies its resource's `action`. The study gets
+  no `action`: the deposits were downloaded from their URLs, not the study, and the study's
+  own link is the HEAL Platform's to write.
 - **Licence.** A file takes its own curated licence, else its deposit's, else a study-level
   default; its text becomes content only when `can_include_content(resource.license)` is
   true, else the file is emitted with no content; each content element copies its file's
@@ -290,7 +291,9 @@ not schema: nothing here is validated. (The producer still writes the previous s
   text layer), `"no_handler"` (a curated file no parser handles) or `"not_licensed"` (the
   licence does not allow the text to be incorporated). On a study: `appl_id` (NIH
   application id), `notes` (curator's notes), and anything else from the study's curated
-  metadata.
+  metadata except what describes the deposits and files (where each was downloaded from,
+  and their curated titles, authors and licences): that is on the resources themselves,
+  and stays in the producer's provenance file.
 - **Which files become resources.** Files a parser can read (Word, PDF, Markdown, plain text;
   spreadsheets and CSV when asked for). A curated file no parser handles becomes a resource
   with no content. Everything else -- recordings, scans, images, primary data -- is counted in

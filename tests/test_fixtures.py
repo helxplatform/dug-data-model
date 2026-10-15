@@ -8,9 +8,10 @@ Min Gon Kim, Kai Yu, Bin He et al. and Kai Yu, Samantha Schmitt, Bin He et al. (
 Mellon University). It is a frozen example of the shape, refreshed when the model changes,
 not a contract with that producer.
 
-It is a copy of the producer's examples/HDP00009/HDP00009.json (its one-resource-type
-branch, 2026-10-13), with `license` added by hand to the two content elements, copied from
-their files, until the producer writes it; refresh it when that file changes.
+It is a copy of the producer's examples/HDP00009/HDP00009.json (its improve-ddm-v2 branch,
+2026-10-15), unedited; refresh it when that file changes. The study carries only `appl_id`:
+where the deposits were downloaded from is on each deposit's `action`, not repeated on the
+study, and the study has no `action` of its own, since its link is the HEAL Platform's to set.
 """
 
 import json
@@ -72,6 +73,14 @@ class TestRealOutput:
             deposit = get_element_by_id(elements, file.parents[0])
             assert deposit.resource_type == "dataset" and file.parent_type == "resource"
             assert deposit.parents == [study.id] and deposit.parent_type == "study"
+
+    def test_study_carries_neither_its_deposits_urls_nor_a_link_of_its_own(self, elements):
+        study, *rest = elements
+        assert study.metadata == {"appl_id": 9932691} and study.action == ""
+        assert {e.action for e in _deposits(elements)} == {
+            "https://doi.org/10.6084/m9.figshare.24867198",
+            "https://doi.org/10.6084/m9.figshare.25036019",
+        }
 
     def test_everything_below_the_study_names_it_in_studies(self, elements):
         study, *rest = elements
