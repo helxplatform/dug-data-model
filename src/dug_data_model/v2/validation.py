@@ -2,6 +2,17 @@
 
 This module provides functions for validating collections of DugElement objects:
 that their IDs are unique, and that the IDs they refer to resolve to the right elements.
+
+The public API, re-exported from the package:
+
+- `find_duplicate_ids()` and `validate_unique_ids()` (raises `DuplicateIdError`)
+- `find_missing_references()` and `find_inconsistent_references()`
+- `validate_references()`, which runs all three checks and raises `DuplicateIdError`,
+  `MissingReferenceError` or `InconsistentReferenceError`
+
+The private helpers below them are grouped by what they do. Before scanning `model_fields`
+for the `References` or `FromParents` markers again, look under "Reading the markers off a
+class" at the bottom.
 """
 
 from __future__ import annotations
@@ -18,6 +29,10 @@ if TYPE_CHECKING:
 
 _Index = dict[str, list["DugElement"]]
 
+
+# ---------------------------------------------------------------------------
+# Errors
+# ---------------------------------------------------------------------------
 
 class DuplicateIdError(ValueError):
     """Raised when duplicate element IDs are found."""
@@ -63,6 +78,10 @@ class InconsistentReferenceError(ValueError):
         super().__init__("Inconsistent references: " + "; ".join(problems))
 
 
+# ---------------------------------------------------------------------------
+# Public checks
+# ---------------------------------------------------------------------------
+
 def find_duplicate_ids(elements: Iterable[DugElement]) -> dict[str, int]:
     """Find duplicate element IDs.
 
@@ -93,34 +112,6 @@ def validate_unique_ids(elements: Iterable[DugElement]) -> None:
         raise DuplicateIdError(duplicates)
 
 
-@cache
-def _reference_fields(cls: type[DugElement]) -> tuple[tuple[str, References], ...]:
-    """Return the name and `References` marker of each of *cls*'s fields that hold IDs."""
-    return tuple(
-        (name, marker)
-        for name, field in cls.model_fields.items()
-        for marker in field.metadata
-        if isinstance(marker, References)
-    )
-
-
-@cache
-def _from_parents_fields(cls: type[DugElement]) -> tuple[str, ...]:
-    """Return the names of *cls*'s fields that carry the `FromParents` marker."""
-    return tuple(
-        name
-        for name, field in cls.model_fields.items()
-        if any(isinstance(marker, FromParents) for marker in field.metadata)
-    )
-
-
-@cache
-def _literal_values(cls: type[DugElement], field_name: str) -> frozenset[object] | None:
-    """Return the values *cls*'s field allows if it is a `Literal`, else None."""
-    annotation = cls.model_fields[field_name].annotation
-    return frozenset(get_args(annotation)) if get_origin(annotation) is Literal else None
-
-
 def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str]]:
     """Find IDs that elements refer to but that are not in the collection.
 
@@ -137,16 +128,6 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
     """
     all_elements = list(elements)
     return _missing_references(all_elements, group_by_id(all_elements))
-
-
-def _missing_references(elements: list[DugElement], by_id: _Index) -> dict[str, set[str]]:
-    missing: dict[str, set[str]] = {}
-    for elem in elements:
-        for field_name, _ in _reference_fields(type(elem)):
-            for ref in getattr(elem, field_name):
-                if ref not in by_id:
-                    missing.setdefault(field_name, set()).add(ref)
-    return missing
 
 
 def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
@@ -179,6 +160,52 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     """
     all_elements = list(elements)
     return _inconsistent_references(all_elements, group_by_id(all_elements))
+
+
+def validate_references(elements: Iterable[DugElement]) -> None:
+    """Validate that every `References` field points at the right elements in the collection.
+
+    First that no two elements share an ID, since a reference to a shared ID is ambiguous;
+    then that every referenced ID is in the collection, and that each points at the right kind
+    of element (see `find_inconsistent_references()`). This is opt-in rather than part of
+    loading, because a producer may legitimately split related elements across several files.
+
+    Args:
+        elements: An iterable of DugElement objects.
+
+    Raises:
+        DuplicateIdError: If two elements share an ID.
+        MissingReferenceError: If any referenced ID is not in the collection.
+        InconsistentReferenceError: If a reference points at the wrong type of element.
+    """
+    all_elements = list(elements)
+    by_id = group_by_id(all_elements)
+    duplicates = {id_: len(elems) for id_, elems in by_id.items() if len(elems) > 1}
+    if duplicates:
+        raise DuplicateIdError(duplicates)
+    missing = _missing_references(all_elements, by_id)
+    if missing:
+        all_missing = set().union(*missing.values())
+        raise MissingReferenceError(
+            all_missing, reference_type="/".join(sorted(missing)), by_field=missing
+        )
+    problems = _inconsistent_references(all_elements, by_id)
+    if problems:
+        raise InconsistentReferenceError(problems)
+
+
+# ---------------------------------------------------------------------------
+# The checks, against an index by ID that validate_references() builds once for all of them
+# ---------------------------------------------------------------------------
+
+def _missing_references(elements: list[DugElement], by_id: _Index) -> dict[str, set[str]]:
+    missing: dict[str, set[str]] = {}
+    for elem in elements:
+        for field_name, _ in _reference_fields(type(elem)):
+            for ref in getattr(elem, field_name):
+                if ref not in by_id:
+                    missing.setdefault(field_name, set()).add(ref)
+    return missing
 
 
 def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[str]:
@@ -223,40 +250,9 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
     return problems
 
 
-def _parent_cycles(by_id: _Index) -> list[str]:
-    """Return one problem per cycle in `parents`, named after the element it returns to.
-
-    A depth-first walk up `parents`, iterative so that a deep tree cannot hit the recursion
-    limit. An element is grey while the walk is above it and black once everything above it
-    is done, so reaching a grey element again means the walk has gone round a cycle.
-    """
-    grey, black = 1, 2
-    state: dict[str, int] = {}
-    problems: list[str] = []
-
-    def parents_of(id_: str) -> Iterator[str]:
-        return iter([p for elem in by_id[id_] for p in elem.parents if p in by_id])
-
-    for start in by_id:
-        if start in state:
-            continue
-        state[start] = grey
-        path = [start]
-        stack = [parents_of(start)]
-        while stack:
-            parent = next(stack[-1], None)
-            if parent is None:
-                state[path.pop()] = black
-                stack.pop()
-            elif parent not in state:
-                state[parent] = grey
-                path.append(parent)
-                stack.append(parents_of(parent))
-            elif state[parent] == grey:
-                cycle = path[path.index(parent):] + [parent]
-                problems.append(f"{parent}: parents lead back to {parent} ({' -> '.join(cycle)})")
-    return problems
-
+# ---------------------------------------------------------------------------
+# The rules that find_inconsistent_references() applies
+# ---------------------------------------------------------------------------
 
 def _not_allowed(elem: DugElement, field_name: str) -> str:
     """Return a problem if *elem*'s *field_name* is outside the `Literal` its class declares.
@@ -296,33 +292,68 @@ def _inherited_problem(elem: DugElement, field_name: str, element_type: str, by_
     )
 
 
-def validate_references(elements: Iterable[DugElement]) -> None:
-    """Validate that every `References` field points at the right elements in the collection.
+def _parent_cycles(by_id: _Index) -> list[str]:
+    """Return one problem per cycle in `parents`, named after the element it returns to.
 
-    First that no two elements share an ID, since a reference to a shared ID is ambiguous;
-    then that every referenced ID is in the collection, and that each points at the right kind
-    of element (see `find_inconsistent_references()`). This is opt-in rather than part of
-    loading, because a producer may legitimately split related elements across several files.
-
-    Args:
-        elements: An iterable of DugElement objects.
-
-    Raises:
-        DuplicateIdError: If two elements share an ID.
-        MissingReferenceError: If any referenced ID is not in the collection.
-        InconsistentReferenceError: If a reference points at the wrong type of element.
+    A depth-first walk up `parents`, iterative so that a deep tree cannot hit the recursion
+    limit. An element is grey while the walk is above it and black once everything above it
+    is done, so reaching a grey element again means the walk has gone round a cycle.
     """
-    all_elements = list(elements)
-    by_id = group_by_id(all_elements)
-    duplicates = {id_: len(elems) for id_, elems in by_id.items() if len(elems) > 1}
-    if duplicates:
-        raise DuplicateIdError(duplicates)
-    missing = _missing_references(all_elements, by_id)
-    if missing:
-        all_missing = set().union(*missing.values())
-        raise MissingReferenceError(
-            all_missing, reference_type="/".join(sorted(missing)), by_field=missing
-        )
-    problems = _inconsistent_references(all_elements, by_id)
-    if problems:
-        raise InconsistentReferenceError(problems)
+    grey, black = 1, 2
+    state: dict[str, int] = {}
+    problems: list[str] = []
+
+    def parents_of(id_: str) -> Iterator[str]:
+        return iter([p for elem in by_id[id_] for p in elem.parents if p in by_id])
+
+    for start in by_id:
+        if start in state:
+            continue
+        state[start] = grey
+        path = [start]
+        stack = [parents_of(start)]
+        while stack:
+            parent = next(stack[-1], None)
+            if parent is None:
+                state[path.pop()] = black
+                stack.pop()
+            elif parent not in state:
+                state[parent] = grey
+                path.append(parent)
+                stack.append(parents_of(parent))
+            elif state[parent] == grey:
+                cycle = path[path.index(parent):] + [parent]
+                problems.append(f"{parent}: parents lead back to {parent} ({' -> '.join(cycle)})")
+    return problems
+
+
+# ---------------------------------------------------------------------------
+# Reading the markers off a class
+# ---------------------------------------------------------------------------
+
+@cache
+def _reference_fields(cls: type[DugElement]) -> tuple[tuple[str, References], ...]:
+    """Return the name and `References` marker of each of *cls*'s fields that hold IDs."""
+    return tuple(
+        (name, marker)
+        for name, field in cls.model_fields.items()
+        for marker in field.metadata
+        if isinstance(marker, References)
+    )
+
+
+@cache
+def _from_parents_fields(cls: type[DugElement]) -> tuple[str, ...]:
+    """Return the names of *cls*'s fields that carry the `FromParents` marker."""
+    return tuple(
+        name
+        for name, field in cls.model_fields.items()
+        if any(isinstance(marker, FromParents) for marker in field.metadata)
+    )
+
+
+@cache
+def _literal_values(cls: type[DugElement], field_name: str) -> frozenset[object] | None:
+    """Return the values *cls*'s field allows if it is a `Literal`, else None."""
+    annotation = cls.model_fields[field_name].annotation
+    return frozenset(get_args(annotation)) if get_origin(annotation) is Literal else None
