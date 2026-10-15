@@ -92,10 +92,7 @@ def find_duplicate_ids(elements: Iterable[DugElement]) -> dict[str, int]:
         A dict mapping duplicate IDs to their occurrence count.
         Empty dict if no duplicates.
     """
-    seen: dict[str, int] = {}
-    for elem in elements:
-        seen[elem.id] = seen.get(elem.id, 0) + 1
-    return {id_: count for id_, count in seen.items() if count > 1}
+    return _duplicate_ids(group_by_id(elements))
 
 
 def validate_unique_ids(elements: Iterable[DugElement]) -> None:
@@ -185,7 +182,7 @@ def validate_references(elements: Iterable[DugElement]) -> None:
     """
     all_elements = list(elements)
     by_id = group_by_id(all_elements)
-    duplicates = {id_: len(elems) for id_, elems in by_id.items() if len(elems) > 1}
+    duplicates = _duplicate_ids(by_id)
     if duplicates:
         raise DuplicateIdError(duplicates)
     missing = _missing_references(all_elements, by_id)
@@ -202,6 +199,10 @@ def validate_references(elements: Iterable[DugElement]) -> None:
 # ---------------------------------------------------------------------------
 # The checks, against an index by ID that validate_references() builds once for all of them
 # ---------------------------------------------------------------------------
+
+def _duplicate_ids(by_id: _Index) -> dict[str, int]:
+    return {id_: len(elems) for id_, elems in by_id.items() if len(elems) > 1}
+
 
 def _missing_references(elements: list[DugElement], by_id: _Index) -> dict[str, set[str]]:
     missing: dict[str, set[str]] = {}
