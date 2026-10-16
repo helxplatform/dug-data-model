@@ -256,12 +256,20 @@ def _reference_field_problems(
                 return [f"{elem.id}: {marker.type_from} is {expected!r} but {field_name} is empty"]
     if not expected:
         return []
+    # A target with no type at all is at fault itself, so the problem is named after it.
     return [
-        f"{elem.id}: {field_name} names {ref}, a {target.type or 'untyped element'}, not a {expected}"
+        f"{elem.id}: {field_name} names {ref}, {_a(target.type)}, not {_a(expected)}"
+        if target.type
+        else f"{ref}: type is empty, but {elem.id}'s {field_name} names it as {_a(expected)}"
         for ref in refs
         for target in by_id.get(ref, ())
         if target.type != expected
     ]
+
+
+def _a(noun: str) -> str:
+    """Return *noun* after "a" or "an"; a type is one lower-case word, so a vowel decides."""
+    return f"{'an' if noun[:1] in 'aeiou' else 'a'} {noun}"
 
 
 def _not_allowed(elem: DugElement, field_name: str) -> str:

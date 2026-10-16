@@ -191,6 +191,21 @@ class TestInconsistentReferences:
                  EmptyDefault(id="e", name="E", description="")]
         assert find_inconsistent_references(roots) == []
 
+    def test_an_untyped_target_is_named_as_the_fault(self):
+        # DugElement leaves type a free string, so only the reference can catch it empty.
+        study = DugStudy(id="s1", name="Study", description="desc", section_list=["x"])
+        untyped = DugElement(id="x", name="X", description="")
+        assert find_inconsistent_references([study, untyped]) == [
+            "x: type is empty, but s1's section_list names it as a section",
+        ]
+
+    def test_types_starting_with_a_vowel_take_an(self):
+        study = DugStudy(id="s1", name="Study", description="desc", section_list=["i"])
+        item = DugElement(id="i", name="I", description="", type="item")
+        assert find_inconsistent_references([study, item]) == [
+            "s1: section_list names i, an item, not a section",
+        ]
+
     def test_a_parent_type_assigned_after_loading_is_checked(self):
         # Pydantic does not validate assignment, so the Literal is checked again here.
         study = DugStudy(id="s1", name="Study", description="desc")
