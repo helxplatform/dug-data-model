@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from typing import Annotated, Any, Literal, override
 
-from pydantic import Field, computed_field
+from pydantic import Field, computed_field, field_validator
 
 from .base import DugElement, FromParents, References
 
 CONTENT_TYPE = "content"
+
+UNLICENSED_VALUES: frozenset[str] = frozenset({"", "none", "noassertion"})
+"""`license` values, casefolded and stripped, that can never permit content: empty (nobody
+has checked), and SPDX's NONE (no licence declared) and NOASSERTION (not determined)."""
 
 
 class DugContent(DugElement):
@@ -28,7 +32,11 @@ class DugContent(DugElement):
     a copy of that licence, not a gate: Dug indexes and returns each element on its own, so
     a content hit carries the terms of its text, for attribution, without a lookup through
     `parents`. It is required, and `validate_references()` checks that it equals each
-    parent's, so that the copy cannot drift from the resource it came from.
+    parent's, so that the copy cannot drift from the resource it came from. Loading rejects
+    the values in `UNLICENSED_VALUES`, which say that no licence permits the text. It does
+    not check `can_include_content()`, because a producer may widen `CONTENT_LICENSES` for a
+    source whose terms a person has checked; so a NonCommercial licence on content is that
+    producer's decision, not an error.
 
     Content is a separate element, not a list inside its resource, because Dug annotates and
     indexes each element on its own: a section is sent to the annotator as one bounded text
@@ -65,6 +73,15 @@ class DugContent(DugElement):
             "it; must equal the parent's `license`."
         )
     )
+
+    @field_validator("license")
+    @classmethod
+    def _license_permits_content(cls, value: str) -> str:
+        if value.strip().casefold() in UNLICENSED_VALUES:
+            raise ValueError(
+                f"license {value!r} permits no content; a resource with no licence has none"
+            )
+        return value
 
     @override
     @computed_field

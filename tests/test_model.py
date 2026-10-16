@@ -133,6 +133,16 @@ class TestDugContent:
         with pytest.raises(ValidationError, match="license"):
             DugContent(id="d1/intro", name="Intro", description="", content="Text")
 
+    @pytest.mark.parametrize("license", ["", " ", "NONE", "none", "NOASSERTION"])
+    def test_no_licence_permits_no_content(self, license):
+        # Content exists only under a licence that permits it; these never do. A licence
+        # outside CONTENT_LICENSES loads, since a producer may widen that list.
+        with pytest.raises(ValidationError, match="permits no content"):
+            DugContent(id="d1/intro", name="Intro", description="", content="Text",
+                       license=license)
+        DugContent(id="d1/intro", name="Intro", description="", content="Text",
+                   license="CC-BY-NC-4.0")
+
     def test_its_parent_is_a_resource(self):
         DugContent(id="r/h", name="H", description="",
                    license="CC-BY-4.0", content="t", parents=["r"],

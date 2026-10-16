@@ -214,7 +214,10 @@ its text may be indexed and shown, and nothing downstream has to check a flag. E
 element also carries a copy of the licence in its own `license`, because Dug indexes and
 returns elements one at a time: a content hit then states the terms of its text, for
 attribution, without a lookup through `parents`. The copy is required, and
-`validate_references()` checks that it equals the resource's. A file whose licence does not
+`validate_references()` checks that it equals the resource's. Content whose `license` is
+empty, `NONE` or `NOASSERTION` fails to load, since none of those permits anything; any other
+licence loads, because a producer may widen `CONTENT_LICENSES` once a person has checked a
+source's terms. A file whose licence does not
 allow it is still a resource, with its `license` and no content: it is found by its title and
 description, and the UI sends the user to `action` to read it at the source. A file whose
 format nothing can read is a resource with no content in the same way.

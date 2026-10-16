@@ -57,7 +57,11 @@ data rather than in a flag that an index or a UI has to remember to honour. `lic
 a copy of that licence, not a gate: Dug indexes and returns each element on its own, so
 a content hit carries the terms of its text, for attribution, without a lookup through
 `parents`. It is required, and `validate_references()` checks that it equals each
-parent's, so that the copy cannot drift from the resource it came from.
+parent's, so that the copy cannot drift from the resource it came from. Loading rejects
+the values in `UNLICENSED_VALUES`, which say that no licence permits the text. It does
+not check `can_include_content()`, because a producer may widen `CONTENT_LICENSES` for a
+source whose terms a person has checked; so a NonCommercial licence on content is that
+producer's decision, not an error.
 
 Content is a separate element, not a list inside its resource, because Dug annotates and
 indexes each element on its own: a section is sent to the annotator as one bounded text
