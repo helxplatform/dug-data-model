@@ -56,6 +56,8 @@ REPOSITORY_KINDS: tuple[str, ...] = (
     "github",
     "sparc",
     "pennsieve",
+    "biorxiv",
+    "medrxiv",
 )
 """Recommended values for `DugResource.repository`: one lower-case slug per repository.
 
