@@ -217,6 +217,23 @@ class TestInconsistentReferences:
             validate_references([study, section, variable, twin])
         assert exc_info.value.duplicate_ids == {"crf": 2}
 
+    def test_parents_that_go_round_in_a_cycle(self):
+        a = _Node(id="a", name="A", description="", parents=["b"], parent_type="node")
+        b = _Node(id="b", name="B", description="", parents=["a"], parent_type="node")
+        own = _Node(id="own", name="O", description="", parents=["own"], parent_type="node")
+        assert find_inconsistent_references([a, b, own]) == [
+            "a: parents lead back to a (a -> b -> a)",
+            "own: parents lead back to own (own -> own)",
+        ]
+
+    def test_shared_ancestors_are_not_a_cycle(self):
+        # Two paths up to the same study meet, but never return to where they began.
+        study = DugStudy(id="s1", name="Study", description="desc")
+        a = _Node(id="a", name="A", description="", parents=["s1"], parent_type="study")
+        b = _Node(id="b", name="B", description="", parents=["s1"], parent_type="study")
+        leaf = _Node(id="leaf", name="L", description="", parents=["a", "b"], parent_type="node")
+        assert find_inconsistent_references([study, a, b, leaf]) == []
+
     def test_validate_raises_on_inconsistency(self):
         study, section, variable = _study_tree()
         variable.parents = ["s1"]

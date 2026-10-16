@@ -20,7 +20,7 @@ more copy to keep in step.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
 from functools import cache
 from typing import TYPE_CHECKING, Literal, get_args, get_origin
 
@@ -142,6 +142,7 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
       names parents must say what type they are, and one that says must name them. Where `parent_type` is the base class's free string, as on
       variables and sections, it is checked only when set, since producers written before
       this check (the HEAL CDE output, for one) leave it empty (`_reference_field_problems()`).
+    - `parents` may not go round in a cycle, which no tree can contain (`_parent_cycles()`).
 
     Loading enforces the `Literal` types too, but pydantic does not validate assignment, so
     an element changed after it was built is caught here. IDs that do not resolve are left to
@@ -215,6 +216,7 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
             problems.append(problem)
         for field_name, marker in References.fields_of(type(elem)):
             problems.extend(_reference_field_problems(elem, field_name, marker, by_id))
+    problems.extend(_parent_cycles(by_id))
     return problems
 
 
@@ -265,6 +267,41 @@ def _not_allowed(elem: DugElement, field_name: str) -> str:
     if allowed is None or value in allowed:
         return ""
     return f"{elem.id}: {field_name} is {value!r}, not one of {', '.join(repr(v) for v in sorted(map(str, allowed)))}"
+
+
+def _parent_cycles(by_id: _Index) -> list[str]:
+    """Return one problem per cycle in `parents`, named after the element it returns to.
+
+    A depth-first walk up `parents`, iterative so that a deep tree cannot hit the recursion
+    limit. An element is grey while the walk is above it and black once everything above it
+    is done, so reaching a grey element again means the walk has gone round a cycle.
+    """
+    grey, black = 1, 2
+    state: dict[str, int] = {}
+    problems: list[str] = []
+
+    def parents_of(id_: str) -> Iterator[str]:
+        return iter([p for elem in by_id[id_] for p in elem.parents if p in by_id])
+
+    for start in by_id:
+        if start in state:
+            continue
+        state[start] = grey
+        path = [start]
+        stack = [parents_of(start)]
+        while stack:
+            parent = next(stack[-1], None)
+            if parent is None:
+                state[path.pop()] = black
+                stack.pop()
+            elif parent not in state:
+                state[parent] = grey
+                path.append(parent)
+                stack.append(parents_of(parent))
+            elif state[parent] == grey:
+                cycle = path[path.index(parent):] + [parent]
+                problems.append(f"{parent}: parents lead back to {parent} ({' -> '.join(cycle)})")
+    return problems
 
 
 # ---------------------------------------------------------------------------
