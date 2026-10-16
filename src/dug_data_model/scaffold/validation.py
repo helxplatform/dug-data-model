@@ -142,8 +142,7 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     - Each referenced element must have the `type` that its field's `References` marker
       declares: `element_type`, or for `parents` the element's `parent_type`. When its class
       narrows `parent_type` to a `Literal`, the value must be one it allows, an element that
-      names parents must say what type they are, and, if the `Literal` allows `""`, one that
-      says must name them; an element with neither is a root, and always fine. Where
+      names parents must say what type they are, and one that says must name them. Where
       `parent_type` is the base class's free string, as on variables and sections, it is
       checked only when set, since producers written before this check (the HEAL CDE output,
       for one) leave it empty (`_reference_field_problems()`).
@@ -238,24 +237,18 @@ def _reference_field_problems(
     set without the references or the references without it, stops the field's other
     checks, since they would only repeat it; then each resolved target must have the expected
     type. Only a class that narrows `type_from` to a `Literal` must set it with the
-    references; on any other class an empty one skips the type check. An element with
-    neither, such as the root of a tree, is always fine. One with only `type_from` is wrong
-    only when the `Literal` allows `""`: a `Literal` without it fixes the value, so every
-    element of the class has it, references or not.
+    references; on any other class an empty one skips the type check.
     """
     refs = getattr(elem, field_name)
     expected = marker.element_type
     if marker.type_from:
         expected = getattr(elem, marker.type_from)
-        if not refs and not expected:
-            return []
         if problem := _not_allowed(elem, marker.type_from):
             return [problem]
-        allowed = _literal_values(type(elem), marker.type_from)
-        if allowed is not None:
+        if _literal_values(type(elem), marker.type_from) is not None:
             if refs and not expected:
                 return [f"{elem.id}: {field_name} is set but {marker.type_from} is empty"]
-            if expected and not refs and "" in allowed:
+            if expected and not refs:
                 return [f"{elem.id}: {marker.type_from} is {expected!r} but {field_name} is empty"]
     if not expected:
         return []
