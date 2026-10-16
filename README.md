@@ -66,9 +66,31 @@ data = json.loads("""
 elements = DugElementParsedList.validate_python(data)
 ```
 
+### Checking the references between elements
+
+Loading checks each element on its own, so an ID in `parents`, `variable_list` or
+`section_list` that names nothing, or names an element of the wrong type, still loads.
+`validate_references()` checks a whole collection: that no two elements share an ID, that
+every referenced ID resolves within it, that each points at an element of the right type
+(for `parents`, the element's `parent_type`, when it is set), and that `parents` never goes
+round in a cycle, so no element ends up as its own ancestor. It raises `DuplicateIdError`,
+`MissingReferenceError` or `InconsistentReferenceError`; `find_missing_references()` and
+`find_inconsistent_references()` return the problems instead. It is opt-in, because a
+producer may split related elements across several files.
+
+```python
+from dug_data_model.v2 import validate_references
+
+validate_references(elements)
+```
+
 ## Scaffold: Creating a New Model Version
 
-Use the scaffold CLI to generate a new data model version inside the package:
+Use the scaffold CLI to generate a new data model version inside the package. It copies the
+scaffold's files rather than importing them, so a released version does not change when the
+scaffold does. `utils.py` and `validation.py` do not depend on the version, so they are kept
+identical in the scaffold and in `v2/`: make a fix in both, and `tests/test_scaffold_copies.py`
+fails if one is forgotten.
 
 ```bash
 # Create v3 of the data model
@@ -117,6 +139,23 @@ class DugVariable(DugElement):
         base = super().get_searchable_dict()
         return {**base, "data_type": self.data_type}
 ```
+
+A field that holds the IDs of other elements should carry the `References` marker, with the
+`type` those elements should have, so that `validate_references()` checks it. Its name does
+not matter:
+
+```python
+from typing import Annotated
+from pydantic import Field
+from .base import DugElement, References
+
+class DugStudy(DugElement):
+    type: Literal["study"] = "study"
+    variable_list: Annotated[list[str], References("variable")] = Field(default_factory=list)
+```
+
+A class that narrows `parent_type` to a `Literal` is held to it: an element of that class
+that names `parents` must set `parent_type`, and one that sets it must name them.
 
 #### 2. Define your Indexable union
 
