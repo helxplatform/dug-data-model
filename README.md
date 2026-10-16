@@ -155,7 +155,11 @@ class DugStudy(DugElement):
 ```
 
 A class that narrows `parent_type` to a `Literal` is held to it: an element of that class
-that names `parents` must set `parent_type`, and one that sets it must name them.
+that names `parents` must set `parent_type`. Include `""` in the `Literal` if the class can
+have root elements that should leave `parent_type` empty, as in
+`Literal["", "study", "section"] = ""`; then an element that sets `parent_type` must also name
+`parents`. A `Literal` without `""`, such as `Literal["study"] = "study"`, fixes the parent
+type for the whole class, and an element without `parents` simply keeps it.
 
 #### 2. Define your Indexable union
 

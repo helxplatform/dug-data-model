@@ -176,6 +176,21 @@ class TestInconsistentReferences:
             "n: parent_type is 'study' but parents is empty",
         ]
 
+    def test_roots_are_fine_where_the_literal_leaves_out_the_empty_string(self):
+        # Literal["study"] fixes the parent type, so a root keeps it; with a default of ""
+        # (which pydantic does not validate) a root leaves it empty. Neither is a problem.
+        class Fixed(DugElement):
+            type: Literal["fixed"] = "fixed"
+            parent_type: Literal["study"] = "study"
+
+        class EmptyDefault(DugElement):
+            type: Literal["empty"] = "empty"
+            parent_type: Literal["study"] = ""
+
+        roots = [Fixed(id="f", name="F", description=""),
+                 EmptyDefault(id="e", name="E", description="")]
+        assert find_inconsistent_references(roots) == []
+
     def test_a_parent_type_assigned_after_loading_is_checked(self):
         # Pydantic does not validate assignment, so the Literal is checked again here.
         study = DugStudy(id="s1", name="Study", description="desc")

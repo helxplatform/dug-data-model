@@ -31,8 +31,10 @@ class References:
     `element_type` is the `type` the referenced elements should have. When that varies, it is
     empty and `type_from` names the field of the same element that gives it, as `parent_type`
     does for `parents`. When a class narrows that field to a `Literal`, it must be set
-    whenever the references are and not without them, and `validate_references()` checks the
-    value against the `Literal` again, so that one assigned after loading is caught. On a
+    whenever the references are, and `validate_references()` checks the value against the
+    `Literal` again, so that one assigned after loading is caught. If the `Literal` allows
+    `""`, it must also be empty whenever the references are, so that a root element says so;
+    one without `""` fixes the value, which roots then keep. On a
     class that leaves it a free string, an empty value skips the type check: producers older
     than the check, such as the HEAL CDE output, write `parents` without `parent_type`.
     """
