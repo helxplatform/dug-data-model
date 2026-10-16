@@ -1,17 +1,35 @@
 """Tests for dug_data_model.v2.model"""
 
+import re
+from pathlib import Path
+
 import pytest
+from pydantic import ValidationError
+
+from dug_data_model import scaffold
 from dug_data_model.v2 import (
     DugElement,
+    FromParents,
+    References,
     DugConcept,
     DugVariable,
     DugStudy,
     DugSection,
+    DugContent,
+    DugResource,
     DugElementParsedList,
+    load_elements,
+    serialize_elements,
     VARIABLE_TYPE,
     STUDY_TYPE,
     CONCEPT_TYPE,
     SECTION_TYPE,
+    CONTENT_TYPE,
+    RESOURCE_TYPE,
+    RESOURCE_KINDS,
+    REPOSITORY_KINDS,
+    CONTENT_LICENSES,
+    can_include_content,
 )
 
 
@@ -55,6 +73,15 @@ class TestDugStudy:
         assert "variable_list" in d
         assert "section_list" in d
 
+    def test_lists_no_publications_resources_or_documents(self):
+        # Its resources name it in `parents`; see the docstring for why.
+        dropped = {"publications", "document_list", "resource_list"}
+        assert not dropped & set(DugStudy.model_fields)
+        s = DugStudy.model_validate({"id": "s1", "name": "Study", "description": "",
+                                     "publications": ["10.1234/abc"], "resource_list": ["r1"],
+                                     "document_list": ["d1"]})  # an old file still loads
+        assert not dropped & set(s.get_searchable_dict())
+
 
 class TestDugConcept:
     def test_default_type(self):
@@ -87,11 +114,183 @@ class TestDugSection:
         assert d["variable_list"] == ["v1", "v2"]
 
 
+class TestDugContent:
+    def test_default_type(self):
+        c = DugContent(id="d1/intro", name="Intro", description="",
+                       license="CC-BY-4.0", content="Text")
+        assert c.type == CONTENT_TYPE
+
+    def test_text_is_required(self):
+        # A file from when the text was held in `description` must not load with no text.
+        with pytest.raises(ValidationError):
+            DugContent(id="d1/intro", name="Intro", description="Text")
+
+    def test_has_no_display_flag(self):
+        assert "can_display_content" not in DugContent.model_fields
+
+    def test_licence_is_required(self):
+        # A copy of the resource's licence, so a hit carries the terms of its text.
+        with pytest.raises(ValidationError, match="license"):
+            DugContent(id="d1/intro", name="Intro", description="", content="Text")
+
+    @pytest.mark.parametrize("license", ["", " ", "NONE", "none", "NOASSERTION"])
+    def test_no_licence_permits_no_content(self, license):
+        # Content exists only under a licence that permits it; these never do. A licence
+        # outside CONTENT_LICENSES loads, since a producer may widen that list.
+        with pytest.raises(ValidationError, match="permits no content"):
+            DugContent(id="d1/intro", name="Intro", description="", content="Text",
+                       license=license)
+        DugContent(id="d1/intro", name="Intro", description="", content="Text",
+                   license="CC-BY-NC-4.0")
+
+    def test_its_parent_is_a_resource(self):
+        DugContent(id="r/h", name="H", description="",
+                   license="CC-BY-4.0", content="t", parents=["r"],
+                   parent_type="resource")
+        content = DugContent(id="r/h", name="H", description="",
+                             license="CC-BY-4.0", content="t", parents=["r"])
+        assert content.parent_type == "resource"
+        # Empty is rejected too: it used to be let through, and then nothing checked the parent.
+        for parent_type in ("document", ""):
+            with pytest.raises(ValidationError, match="parent_type"):
+                DugContent(id="r/h", name="H", description="",
+                           license="CC-BY-4.0", content="t", parents=["d"],
+                           parent_type=parent_type)
+
+    @pytest.mark.parametrize("name, content, expected", [
+        ("Methods", "We did things.", "Methods: We did things."),
+        ("Methods", "", "Methods"),
+        ("", "We did things.", "We did things."),
+    ])
+    def test_ml_ready_desc_joins_heading_and_text(self, name, content, expected):
+        c = DugContent(id="d1/intro", name=name, description="ignored",
+                       license="CC-BY-4.0", content=content)
+        assert c.ml_ready_desc == expected
+
+    def test_location_is_free_text_per_format(self):
+        for location in ("page 3", "line 17", "Data!A1:F120"):
+            DugContent(id="x", name="x", description="",
+                       license="CC-BY-4.0", content="x", location=location)
+
+    def test_negative_order_rejected(self):
+        with pytest.raises(ValidationError):
+            DugContent(id="x", name="x", description="", license="CC-BY-4.0", content="x", order=-1)
+
+    def test_searchable_and_response_dicts_carry_the_text(self):
+        c = DugContent(id="d1/intro", name="Intro", description="",
+                       license="CC-BY-4.0", content="Text",
+                       order=2, location="page 3", studies=["s1"])
+        es = c.get_searchable_dict()
+        assert es["element_type"] == "content"
+        assert es["studies"] == ["s1"]
+        assert es["order"] == 2
+        assert es["location"] == "page 3"
+        assert es["content"] == "Text"
+        assert es["license"] == "CC-BY-4.0"
+        assert es["description"] == ""
+        assert "can_display_content" not in es
+        assert c.get_response_dict()["content"] == "Text"
+
+
+class TestDugResource:
+    def test_its_parent_is_a_study_or_a_resource(self):
+        for parent_type in ("study", "resource", ""):
+            DugResource(id="r", name="R", description="", parent_type=parent_type)
+        for parent_type in ("section", "variable", "content"):
+            with pytest.raises(ValidationError, match="parent_type"):
+                DugResource(id="r", name="R", description="", parents=["x"],
+                            parent_type=parent_type)
+
+    def test_default_type(self):
+        r = DugResource(id="r1", name="Dataset", description="A dataset")
+        assert r.type == RESOURCE_TYPE
+
+    def test_kind_is_unknown_by_default(self):
+        # "dataset" was the default when every resource was a deposit; a file would be
+        # mis-typed by it, so an unset kind is now empty, and compact_dump() leaves it out.
+        r = DugResource(id="r1", name="Dataset", description="A dataset")
+        assert r.resource_type == ""
+        assert "dataset" in RESOURCE_KINDS
+
+    def test_every_kind_has_a_heading_in_the_docs_in_the_same_order(self):
+        # docs/resource-kinds.md says what each kind means; the tuple is only the list.
+        doc = (Path(__file__).parent.parent / "docs" / "resource-kinds.md").read_text()
+        assert re.findall(r"^### `(\w+)`$", doc, re.M) == list(RESOURCE_KINDS)
+
+    def test_recommended_kinds_are_not_enforced(self):
+        assert "readme" in RESOURCE_KINDS
+        r = DugResource(id="r1", name="Notebook", description="", resource_type="lab_notebook")
+        assert r.resource_type == "lab_notebook"
+
+    def test_a_file_is_a_resource_with_a_format(self):
+        page = DugResource(id="r1", name="Deposit", description="", resource_type="dataset")
+        pdf = DugResource(id="r1/readme", name="README", description="", resource_type="readme",
+                          file_name="README.pdf", mime_type="application/pdf",
+                          parents=["r1"], parent_type="resource")
+        assert page.file_name == page.mime_type == ""
+        assert type(page) is type(pdf) is DugResource
+        assert "content" not in DugResource.model_fields
+
+    def test_a_files_kind_matches_its_parents_when_it_is_the_whole_thing(self):
+        # The convention that replaces an is_full_text flag and the old 'article' kind.
+        assert "article" not in RESOURCE_KINDS
+        assert {"publication", "preprint", "supplementary_table", "readme"} <= set(RESOURCE_KINDS)
+        paper = DugResource(id="p", name="Paper", description="", resource_type="publication",
+                            doi="10.1234/abc", parents=["s1"], parent_type="study")
+        full_text = DugResource(id="p/pdf", name="Paper (PDF)", description="",
+                                resource_type="publication", mime_type="application/pdf",
+                                parents=["p"], parent_type="resource")
+        table = DugResource(id="p/s1", name="Table S1", description="",
+                            resource_type="supplementary_table", mime_type="text/csv",
+                            parents=["p"], parent_type="resource")
+        assert full_text.resource_type == paper.resource_type != table.resource_type
+
+    def test_a_document_is_no_longer_a_type(self):
+        assert "document" not in RESOURCE_KINDS
+        with pytest.raises(ValidationError):
+            DugElementParsedList.validate_python(
+                [{"id": "d1", "name": "README", "description": "", "type": "document"}]
+            )
+
+    def test_repository_slugs_are_recommended_not_enforced(self):
+        assert "zenodo" in REPOSITORY_KINDS
+        r = DugResource(id="r1", name="Data", description="", repository="lab-server")
+        assert r.repository == "lab-server"
+
+    def test_get_searchable_dict(self):
+        r = DugResource(
+            id="r1", name="Dataset", description="A dataset", resource_type="dataset",
+            repository="zenodo", authors=["A. Author"], doi="10.5281/zenodo.1",
+            license="CC0-1.0", file_name="data.zip", mime_type="application/zip",
+            action="https://zenodo.org/records/1", studies=["s1"],
+        )
+        es = r.get_searchable_dict()
+        assert es["element_type"] == "resource"
+        assert es["resource_type"] == "dataset"
+        assert es["repository"] == "zenodo"
+        assert es["authors"] == ["A. Author"]
+        assert es["doi"] == "10.5281/zenodo.1"
+        assert es["license"] == "CC0-1.0"
+        assert es["file_name"] == "data.zip"
+        assert es["mime_type"] == "application/zip"
+        assert es["studies"] == ["s1"]
+        assert not {"document_list", "resource_list", "content"} & set(es)
+        assert es["action"] == "https://zenodo.org/records/1"
+
+
 # ---------------------------------------------------------------------------
 # DugElement shared behaviour
 # ---------------------------------------------------------------------------
 
 class TestDugElement:
+    def test_markers_list_the_fields_that_carry_them(self):
+        assert [name for name, _ in References.fields_of(DugResource)] == ["parents", "studies"]
+        assert References.fields_of(DugResource)[1][1] == References("study", inherited=True)
+        assert FromParents.fields_of(DugContent) == ("license",)
+        assert FromParents.fields_of(DugResource) == ()
+        # The scaffold's copy of base.py has them too, so a generated version does.
+        assert [name for name, _ in scaffold.References.fields_of(scaffold.DugElement)] == ["parents"]
+
     def test_add_parent(self):
         v = DugVariable(id="v1", name="var", description="desc")
         v.add_parent("study_1")
@@ -164,13 +363,17 @@ class TestDugElementParsedList:
             {"id": "v1", "name": "var1", "description": "desc", "type": "variable"},
             {"id": "c1", "name": "concept1", "description": "desc", "type": "concept"},
             {"id": "sec1", "name": "section1", "description": "desc", "type": "section"},
+            {"id": "r1", "name": "resource1", "description": "desc", "type": "resource"},
+            {"id": "r1/s", "name": "heading", "description": "", "content": "text",
+             "license": "CC-BY-4.0", "type": "content"},
         ]
         elements = DugElementParsedList.validate_python(data)
         types = {e.type for e in elements}
-        assert types == {"study", "variable", "concept", "section"}
+        assert types == {"study", "variable", "concept", "section", "resource", "content"}
+        assert type(elements[4]) is DugResource
+        assert isinstance(elements[5], DugContent)
 
     def test_wrong_type_raises(self):
-        from pydantic import ValidationError
         data = [{"id": "x", "name": "x", "description": "x", "type": "unknown"}]
         with pytest.raises(ValidationError):
             DugElementParsedList.validate_python(data)
@@ -197,3 +400,41 @@ class TestDugElementParsedList:
         assert restored[0].data_type == "integer"
         assert restored[1].id == "s1"
         assert restored[1].abstract == "text"
+
+    def test_roundtrip_resource_tree(self, tmp_path):
+        original = [
+            DugResource(id="r1", name="Dataset", description="desc", doi="10.1/x",
+                        resource_type="dataset", parents=["s1"], parent_type="study",
+                        studies=["s1"]),
+            DugResource(id="r1/readme", name="README", description="", resource_type="readme",
+                        mime_type="application/pdf", parents=["r1"], parent_type="resource",
+                        studies=["s1"], license="CC-BY-4.0"),
+            DugContent(id="r1/readme/intro", name="Intro", description="",
+                       license="CC-BY-4.0", content="Text",
+                       order=0, location="page 1", parents=["r1/readme"], parent_type="resource",
+                       studies=["s1"]),
+        ]
+        path = tmp_path / "out.json"
+        serialize_elements(original, path)
+        restored = load_elements(path, DugElementParsedList)
+        assert restored == original
+        assert [type(e) for e in restored] == [DugResource, DugResource, DugContent]
+
+
+class TestCanIncludeContent:
+    def test_listed_licences_are_spdx_identifiers(self):
+        assert {"CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0"} <= CONTENT_LICENSES
+
+    @pytest.mark.parametrize("license", [
+        "CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0",
+        # Matching ignores case and surrounding whitespace.
+        "cc-by-4.0", "Cc0-1.0", " CC-BY-SA-4.0\n",
+    ])
+    def test_permissive_licences_allow_content(self, license):
+        assert can_include_content(license) is True
+
+    @pytest.mark.parametrize("license", [
+        "CC-BY-NC-4.0", "CC-BY-ND-4.0", "cc-by-nc-4.0", "LicenseRef-all-rights-reserved", "",
+    ])
+    def test_restrictive_unknown_or_missing_licence_does_not(self, license):
+        assert can_include_content(license) is False

@@ -11,7 +11,8 @@ The public API, re-exported from the package:
   `MissingReferenceError` or `InconsistentReferenceError`
 
 The private helpers below them are grouped by what they do. The fields of a class that carry
-the `References` marker come from `References.fields_of()` in `base.py`.
+the `References` or `FromParents` marker come from `References.fields_of()` and
+`FromParents.fields_of()` in `base.py`.
 
 This is one module, sectioned, rather than several: the scaffold copies it into every version
 and `tests/test_scaffold_copies.py` checks the copies match, so each extra file would be one
@@ -24,7 +25,7 @@ from collections.abc import Iterable, Iterator
 from functools import cache
 from typing import TYPE_CHECKING, Literal, get_args, get_origin
 
-from .base import References
+from .base import FromParents, References
 from .utils import group_by_id
 
 if TYPE_CHECKING:
@@ -119,7 +120,8 @@ def find_missing_references(elements: Iterable[DugElement]) -> dict[str, set[str
     """Find IDs that elements refer to but that are not in the collection.
 
     An element refers to others through the fields marked with `References`: `parents`, and
-    in v2 `variable_list` and `section_list`.
+    in v2 `variable_list`, `section_list` and `studies`. Nothing lists its children: a study
+    does not list its resources, nor a resource the resources or content under it.
 
     Args:
         elements: An iterable of DugElement objects.
@@ -141,17 +143,27 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
       was changed after loading cannot pass for another kind (`_not_allowed()`).
     - Each referenced element must have the `type` that its field's `References` marker
       declares: `element_type`, or for `parents` the element's `parent_type`. When its class
-      narrows `parent_type` to a `Literal`, the value must be one it allows, an element that
-      names parents must say what type they are, and one that says must name them. Where
-      `parent_type` is the base class's free string, as on variables and sections, it is
-      checked only when set, since producers written before this check (the HEAL CDE output,
-      for one) leave it empty (`_reference_field_problems()`).
+      narrows `parent_type` to a `Literal`, as resources and content do, the value must be
+      one it allows, an element that names parents must say what type they are, and one that
+      says must name them. Where `parent_type` is the base class's free string, as on
+      variables and sections, it is checked only when set, since producers written before
+      this check (the HEAL CDE output, for one) leave it empty (`_reference_field_problems()`).
+    - A field marked `inherited`, such as `studies`, must name exactly what the element's
+      parents imply: the parents of its `element_type`, and whatever the same field names on
+      the other parents. An element with no parents must leave it empty, since nothing puts
+      it under what it names (`_inherited_problem()`).
+    - A field marked `FromParents`, such as content's `license`, must equal the same field on
+      each parent that has it (`_from_parents_problems()`).
     - `parents` may not go round in a cycle, which no tree can contain (`_parent_cycles()`).
 
     Loading enforces the `Literal` types too, but pydantic does not validate assignment, so
     an element changed after it was built is caught here. IDs that do not resolve are left to
     `find_missing_references()`. Every element is checked, even one that shares its ID with
     another; a reference to a shared ID must suit every element that has it.
+
+    An earlier version also checked that a `children` list and its members' `parents` agreed
+    in both directions. Those lists are gone (a child names its parent; nothing lists its
+    children), so there is nothing left to disagree.
 
     Args:
         elements: An iterable of DugElement objects.
@@ -220,6 +232,7 @@ def _inconsistent_references(elements: list[DugElement], by_id: _Index) -> list[
             problems.append(problem)
         for field_name, marker in References.fields_of(type(elem)):
             problems.extend(_reference_field_problems(elem, field_name, marker, by_id))
+        problems.extend(_from_parents_problems(elem, by_id))
     problems.extend(_parent_cycles(by_id))
     return problems
 
@@ -235,9 +248,10 @@ def _reference_field_problems(
 
     The field's `type_from`, if it has one, is checked first, and a bad value there, or one
     set without the references or the references without it, stops the field's other
-    checks, since they would only repeat it; then each resolved target must have the expected
-    type. Only a class that narrows `type_from` to a `Literal` must set it with the
-    references; on any other class an empty one skips the type check.
+    checks, since they would only repeat it: then that each resolved target has the expected
+    type, and that an `inherited` field names what the parents imply. Only a class that
+    narrows `type_from` to a `Literal` must set it with the references; on any other class an
+    empty one skips the type check.
     """
     refs = getattr(elem, field_name)
     expected = marker.element_type
@@ -253,7 +267,7 @@ def _reference_field_problems(
     if not expected:
         return []
     # A target with no type at all is at fault itself, so the problem is named after it.
-    return [
+    problems = [
         f"{elem.id}: {field_name} names {ref}, {_a(target.type)}, not {_a(expected)}"
         if target.type
         else f"{ref}: type is empty, but {elem.id}'s {field_name} names it as {_a(expected)}"
@@ -261,6 +275,25 @@ def _reference_field_problems(
         for target in by_id.get(ref, ())
         if target.type != expected
     ]
+    if marker.inherited:
+        if problem := _inherited_problem(elem, field_name, marker.element_type, by_id):
+            problems.append(problem)
+    return problems
+
+
+def _from_parents_problems(elem: DugElement, by_id: _Index) -> list[str]:
+    """Return a problem for each resolved parent whose copy of a `FromParents` field differs."""
+    problems: list[str] = []
+    for field_name in FromParents.fields_of(type(elem)):
+        value = getattr(elem, field_name)
+        for parent_id in elem.parents:
+            for parent in by_id.get(parent_id, ()):
+                if field_name in type(parent).model_fields and getattr(parent, field_name) != value:
+                    problems.append(
+                        f"{elem.id}: {field_name} is {value!r}, but its parent {parent.id} has "
+                        f"{getattr(parent, field_name)!r}"
+                    )
+    return problems
 
 
 def _a(noun: str) -> str:
@@ -279,6 +312,37 @@ def _not_allowed(elem: DugElement, field_name: str) -> str:
     if allowed is None or value in allowed:
         return ""
     return f"{elem.id}: {field_name} is {value!r}, not one of {', '.join(repr(v) for v in sorted(map(str, allowed)))}"
+
+
+def _inherited_problem(elem: DugElement, field_name: str, element_type: str, by_id: _Index) -> str:
+    """Return a problem if *elem*'s inherited *field_name* is not what its parents imply.
+
+    The parents imply those of them that are of *element_type*, and whatever the same field
+    names on the others. An element without parents implies nothing, so one that names
+    something anyway is reported: a query on the field would find it, but a walk down
+    `parents` from what it names would not. One whose parents do not all resolve is not
+    checked, since the parents in another file may imply the rest.
+    """
+    named = set(getattr(elem, field_name))
+    if not elem.parents:
+        if not named:
+            return ""
+        return f"{elem.id}: {field_name} names {', '.join(sorted(named))}, but it has no parents"
+    implied: set[str] = set()
+    for parent_id in elem.parents:
+        if parent_id not in by_id:
+            return ""
+        for parent in by_id[parent_id]:
+            if parent.type == element_type:
+                implied.add(parent.id)
+            else:
+                implied.update(getattr(parent, field_name, ()))
+    if named == implied:
+        return ""
+    return (
+        f"{elem.id}: {field_name} names {', '.join(sorted(named)) or 'nothing'}, but its parents "
+        f"put it under {', '.join(sorted(implied)) or 'nothing'}"
+    )
 
 
 def _parent_cycles(by_id: _Index) -> list[str]:

@@ -105,6 +105,286 @@
       "title": "DugConcept",
       "type": "object"
     },
+    "DugContent": {
+      "description": "A piece of a `DugResource`'s text: a heading and the body under it.\n\nContent is the only element that holds text. A `DugResource` describes and links to a\nfile; if the file's text can be read, and the resource's licence allows the text to be\nincorporated, it is split into DugContent children, one per heading (or a single one\nwhen there are no headings). `name` is the heading and `content` is the text under it.\n`description` is metadata about the piece, as on every other element, and is usually\nempty. `parents` holds the ID of the resource the text came from, and `parent_type` is\n'resource', its default (anything else, even empty, is rejected); `studies` holds the ID\nof the study, as on `DugResource`, so that the study can be found without climbing\nthrough the resource.\n\nContent exists only when its resource's licence permits it (see `licenses.py`): a file\nwhose text may not be incorporated has no content, so the case shows in the shape of the\ndata rather than in a flag that an index or a UI has to remember to honour. `license` is\na copy of that licence, not a gate: Dug indexes and returns each element on its own, so\na content hit carries the terms of its text, for attribution, without a lookup through\n`parents`. It is required, and `validate_references()` checks that it equals each\nparent's, so that the copy cannot drift from the resource it came from. Loading rejects\nthe values in `UNLICENSED_VALUES`, which say that no licence permits the text. It does\nnot check `can_include_content()`, because a producer may widen `CONTENT_LICENSES` for a\nsource whose terms a person has checked; so a NonCommercial licence on content is that\nproducer's decision, not an error.\n\nContent is a separate element, not a list inside its resource, because Dug annotates and\nindexes each element on its own: a section is sent to the annotator as one bounded text\nand comes back as its own search hit, with `order` and `location` to point at. Embedded\nin the resource, the text would be annotated as one PDF-sized string, or not at all, and\nreturned whole with every hit on the resource (see docs/how-dug-uses-elements.md).",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "type": {
+          "const": "content",
+          "default": "content",
+          "title": "Type",
+          "type": "string"
+        },
+        "programs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Programs",
+          "type": "array"
+        },
+        "action": {
+          "default": "",
+          "title": "Action",
+          "type": "string"
+        },
+        "parents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Parents",
+          "type": "array"
+        },
+        "parent_type": {
+          "const": "resource",
+          "default": "resource",
+          "description": "Always 'resource': content is a piece of a DugResource's text.",
+          "title": "Parent Type",
+          "type": "string"
+        },
+        "concepts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DugConcept"
+          },
+          "title": "Concepts",
+          "type": "object"
+        },
+        "search_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Search Terms",
+          "type": "array"
+        },
+        "optional_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Optional Terms",
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "tags": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "order": {
+          "default": 0,
+          "description": "0-based order of this content within its resource, for sorting.",
+          "minimum": 0,
+          "title": "Order",
+          "type": "integer"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Where this content starts in the file, in whatever terms suit the format ('page 3', 'line 17', 'Data!A1:F120'), for a person to find it; not parsed.",
+          "title": "Location"
+        },
+        "content": {
+          "description": "The text under the heading. Required, so that a file written when the text was held in `description` fails to load instead of loading with no text.",
+          "title": "Content",
+          "type": "string"
+        },
+        "studies": {
+          "description": "IDs of the studies this content belongs to, as on DugResource.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Studies",
+          "type": "array"
+        },
+        "license": {
+          "description": "The licence of the resource this text came from, copied so that each hit carries it; must equal the parent's `license`.",
+          "title": "License",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "content",
+        "license"
+      ],
+      "title": "DugContent",
+      "type": "object"
+    },
+    "DugResource": {
+      "description": "Anything outside Dug that has a URL, at whatever size.\n\nA program website, a project's page on an NIH site, a press release, a Zenodo community,\nthe Zenodo or Figshare deposit a study's files came from, a dataset with or without a DOI,\na publication; and each file of any of these: the deposit's README, the paper's PDF, the\ndataset's XLSX, the HTML of the press release. `name` is its title, `description` its\ndescription, `action` its landing or download page. `resource_type` says what it is (see\n`RESOURCE_KINDS`); `repository`, `authors`, `doi` and `license` say where it is published\nand how to cite it. A resource that is one file in one format also has `file_name` and\n`mime_type`; a landing page has neither, and a web page captured as text has\n`mime_type=\"text/html\"` and no `file_name`. A UI renders every resource the same way --\na title, a link, a kind and a format -- in a tree or in a flat list.\n\nResources form a tree. A resource's parent is its study (`parent_type=\"study\"`) or the\nresource it is part of (`parent_type=\"resource\"`), and nothing else: a file hangs off the\ndeposit it was downloaded from, a deposit off its Zenodo community, a press release page\noff the project website, a supplementary table off the paper. A file that came from no\nknown resource hangs off the study. A resource lists nothing: its children name it in `parents`, and\n`studies` names the study from any depth. So a UI that shows only the resources whose\nparent is the study loses nothing, and one that follows `parents` can show the whole\ntree. A resource with the wrong parent is found by `studies` and by search, but shown in\nthe wrong place.\n\nA resource holds no text of its own. Whatever can be read out of a file lives in its\n`DugContent` children, under the file's `license`: a producer emits content only when\n`can_include_content(resource.license)` is true (see `licenses.py`), so a file whose text\ncould not be read -- a scanned PDF, a format no parser handles -- or may not be\nincorporated is a resource with no content, still listed, linked to, and found by its\ntitle and description. Whether a producer emits a resource for every file in a deposit\nor only for the ones a person would read is its choice: the reference producer\ninventories data files in the deposit's `metadata` and emits no resource for them.\n\nEarlier versions had a separate `DugDocument` type for a file, with a `DugCitable` base\nclass for the fields it shared with `DugResource`. Every awkward case -- a press release\npage captured as text, a PDF report with a DOI of its own, a document hanging off a study\nbecause no deposit was known -- came from drawing that line, and a UI had to render two\ntypes; one type in a tree needs neither. A file written with `\"type\": \"document\"` does\nnot load.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "type": {
+          "const": "resource",
+          "default": "resource",
+          "title": "Type",
+          "type": "string"
+        },
+        "programs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Programs",
+          "type": "array"
+        },
+        "action": {
+          "default": "",
+          "title": "Action",
+          "type": "string"
+        },
+        "parents": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Parents",
+          "type": "array"
+        },
+        "parent_type": {
+          "default": "",
+          "description": "'study' when the resource hangs off its study, 'resource' when it is part of another resource; empty only when it has no parents.",
+          "enum": [
+            "",
+            "study",
+            "resource"
+          ],
+          "title": "Parent Type",
+          "type": "string"
+        },
+        "concepts": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DugConcept"
+          },
+          "title": "Concepts",
+          "type": "object"
+        },
+        "search_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Search Terms",
+          "type": "array"
+        },
+        "optional_terms": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Optional Terms",
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "tags": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "title": "Tags",
+          "type": "array"
+        },
+        "resource_type": {
+          "default": "",
+          "description": "Kind of resource; recommended values and what each means are in https://github.com/helxplatform/dug-data-model/blob/main/docs/resource-kinds.md. A file that is its parent in one format has its parent's kind.",
+          "title": "Resource Type",
+          "type": "string"
+        },
+        "repository": {
+          "default": "",
+          "description": "Slug of the repository hosting this resource; recommended values are listed in REPOSITORY_KINDS.",
+          "title": "Repository",
+          "type": "string"
+        },
+        "authors": {
+          "description": "Author names in citation order.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Authors",
+          "type": "array"
+        },
+        "doi": {
+          "default": "",
+          "description": "Bare DOI of this resource, without a resolver prefix; empty when unknown.",
+          "title": "Doi",
+          "type": "string"
+        },
+        "license": {
+          "default": "",
+          "description": "SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not list (e.g. all rights reserved); 'NONE' when the source declares no licence, and empty only when nobody has checked. Governs the DugContent under it.",
+          "title": "License",
+          "type": "string"
+        },
+        "file_name": {
+          "default": "",
+          "description": "Original file name when the resource is one file, e.g. 'README.pdf'; empty for a landing page.",
+          "title": "File Name",
+          "type": "string"
+        },
+        "mime_type": {
+          "default": "",
+          "description": "IANA media type when the resource is one file, e.g. 'application/pdf'; empty for a landing page.",
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "studies": {
+          "description": "IDs of the studies this resource belongs to, at any depth below them; `parents` names only the element directly above.",
+          "items": {
+            "type": "string"
+          },
+          "title": "Studies",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description"
+      ],
+      "title": "DugResource",
+      "type": "object"
+    },
     "DugSection": {
       "properties": {
         "id": {
@@ -207,6 +487,7 @@
       "type": "object"
     },
     "DugStudy": {
+      "description": "A research study.\n\nA study does not list its resources; they name it in `parents`, and `build_parent_map()`\nor a query on `parents` finds them, while `studies` on every resource and content element\nunder the study finds them all at once. That is because the study and its resources need\nnot come from the same producer (DUG-796: the non-data-dictionary producer emits resources\nfor a study the MDS ingest emits), so a list on the study would be complete only by luck.\nIts publications are `DugResource`s with `resource_type` 'publication' or 'preprint'.\nEarlier versions had `publications`, a list of bare strings nothing read, then\n`document_list` and `resource_list`; a file that still carries any of them loads without it.",
       "properties": {
         "id": {
           "title": "Id",
@@ -284,13 +565,6 @@
             "type": "object"
           },
           "title": "Tags",
-          "type": "array"
-        },
-        "publications": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Publications",
           "type": "array"
         },
         "variable_list": {
@@ -425,6 +699,8 @@
     "discriminator": {
       "mapping": {
         "concept": "#/$defs/DugConcept",
+        "content": "#/$defs/DugContent",
+        "resource": "#/$defs/DugResource",
         "section": "#/$defs/DugSection",
         "study": "#/$defs/DugStudy",
         "variable": "#/$defs/DugVariable"
@@ -443,6 +719,12 @@
       },
       {
         "$ref": "#/$defs/DugSection"
+      },
+      {
+        "$ref": "#/$defs/DugResource"
+      },
+      {
+        "$ref": "#/$defs/DugContent"
       }
     ]
   },

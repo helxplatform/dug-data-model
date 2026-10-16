@@ -1,0 +1,167 @@
+from __future__ import annotations
+
+from typing import Annotated, Any, Literal
+
+from pydantic import Field
+
+from .base import DugElement, References
+
+RESOURCE_TYPE = "resource"
+
+RESOURCE_KINDS: tuple[str, ...] = (
+    # Published works
+    "publication",
+    "preprint",
+    "report",
+    "poster",
+    "presentation",
+    "patent",
+    # Data and code
+    "dataset",
+    "data",
+    "supplementary_table",
+    "software",
+    # Documentation
+    "readme",
+    "protocol",
+    "methods",
+    "manual",
+    # On the web
+    "website",
+    "press_release",
+    # Anything else
+    "other",
+)
+"""Recommended values for `DugResource.resource_type`: what the resource is, whether it is a
+landing page or a file.
+
+What each one means, how to choose between neighbours (a preprint or a publication, data or a
+dataset), and how to map DataCite and Crossref types onto them is in `docs/resource-kinds.md`,
+which has a heading per kind in this order; `tests/test_model.py` checks that they agree.
+
+A free string, like `DugVariable.data_type`, so that a new kind does not need a model
+release; producers should prefer these. The list is coarse on purpose: a finer kind belongs
+in `tags`. A file that is its parent in one format has its parent's kind, so the PDF of a
+publication is a `publication`. ('article' was that file's kind when a file was a separate
+`DugDocument` type, and went with it.)
+"""
+
+REPOSITORY_KINDS: tuple[str, ...] = (
+    "figshare",
+    "zenodo",
+    "dataverse",
+    "osf",
+    "openneuro",
+    "mendeley-data",
+    "github",
+    "sparc",
+    "pennsieve",
+    "biorxiv",
+    "medrxiv",
+)
+"""Recommended values for `DugResource.repository`: one lower-case slug per repository.
+
+A free string like `resource_type`, so a new repository does not need a model release, but
+producers that infer the repository from a URL or DOI prefix should map to these slugs so
+that a filter on `repository` finds every deposit from the same place.
+"""
+
+
+class DugResource(DugElement):
+    """Anything outside Dug that has a URL, at whatever size.
+
+    A program website, a project's page on an NIH site, a press release, a Zenodo community,
+    the Zenodo or Figshare deposit a study's files came from, a dataset with or without a DOI,
+    a publication; and each file of any of these: the deposit's README, the paper's PDF, the
+    dataset's XLSX, the HTML of the press release. `name` is its title, `description` its
+    description, `action` its landing or download page. `resource_type` says what it is (see
+    `RESOURCE_KINDS`); `repository`, `authors`, `doi` and `license` say where it is published
+    and how to cite it. A resource that is one file in one format also has `file_name` and
+    `mime_type`; a landing page has neither, and a web page captured as text has
+    `mime_type="text/html"` and no `file_name`. A UI renders every resource the same way --
+    a title, a link, a kind and a format -- in a tree or in a flat list.
+
+    Resources form a tree. A resource's parent is its study (`parent_type="study"`) or the
+    resource it is part of (`parent_type="resource"`), and nothing else: a file hangs off the
+    deposit it was downloaded from, a deposit off its Zenodo community, a press release page
+    off the project website, a supplementary table off the paper. A file that came from no
+    known resource hangs off the study. A resource lists nothing: its children name it in `parents`, and
+    `studies` names the study from any depth. So a UI that shows only the resources whose
+    parent is the study loses nothing, and one that follows `parents` can show the whole
+    tree. A resource with the wrong parent is found by `studies` and by search, but shown in
+    the wrong place.
+
+    A resource holds no text of its own. Whatever can be read out of a file lives in its
+    `DugContent` children, under the file's `license`: a producer emits content only when
+    `can_include_content(resource.license)` is true (see `licenses.py`), so a file whose text
+    could not be read -- a scanned PDF, a format no parser handles -- or may not be
+    incorporated is a resource with no content, still listed, linked to, and found by its
+    title and description. Whether a producer emits a resource for every file in a deposit
+    or only for the ones a person would read is its choice: the reference producer
+    inventories data files in the deposit's `metadata` and emits no resource for them.
+
+    Earlier versions had a separate `DugDocument` type for a file, with a `DugCitable` base
+    class for the fields it shared with `DugResource`. Every awkward case -- a press release
+    page captured as text, a PDF report with a DOI of its own, a document hanging off a study
+    because no deposit was known -- came from drawing that line, and a UI had to render two
+    types; one type in a tree needs neither. A file written with `"type": "document"` does
+    not load.
+    """
+
+    type: Literal["resource"] = RESOURCE_TYPE
+    parent_type: Literal["", "study", "resource"] = Field(
+        "",
+        description="'study' when the resource hangs off its study, 'resource' when it is part "
+        "of another resource; empty only when it has no parents.",
+    )
+
+    resource_type: str = Field(
+        "",
+        description="Kind of resource; recommended values and what each means are in "
+        "https://github.com/helxplatform/dug-data-model/blob/main/docs/resource-kinds.md. A file "
+        "that is its parent in one format has its parent's kind.",
+    )
+    repository: str = Field(
+        "",
+        description="Slug of the repository hosting this resource; recommended values are "
+        "listed in REPOSITORY_KINDS.",
+    )
+    authors: list[str] = Field(default_factory=list, description="Author names in citation order.")
+    doi: str = Field(
+        "", description="Bare DOI of this resource, without a resolver prefix; empty when unknown."
+    )
+    license: str = Field(
+        "",
+        description="SPDX licence identifier, or a `LicenseRef-` name for terms SPDX does not "
+        "list (e.g. all rights reserved); 'NONE' when the source declares no licence, and empty "
+        "only when nobody has checked. Governs the DugContent under it.",
+    )
+    file_name: str = Field(
+        "",
+        description="Original file name when the resource is one file, e.g. 'README.pdf'; "
+        "empty for a landing page.",
+    )
+    mime_type: str = Field(
+        "",
+        description="IANA media type when the resource is one file, e.g. 'application/pdf'; "
+        "empty for a landing page.",
+    )
+    studies: Annotated[list[str], References("study", inherited=True)] = Field(
+        default_factory=list,
+        description="IDs of the studies this resource belongs to, at any depth below them; "
+        "`parents` names only the element directly above.",
+    )
+
+    def get_searchable_dict(self) -> dict[str, Any]:
+        es_elem = super().get_searchable_dict()
+        return {
+            **es_elem,
+            "resource_type": self.resource_type,
+            "repository": self.repository,
+            "authors": self.authors,
+            "doi": self.doi,
+            "license": self.license,
+            "file_name": self.file_name,
+            "mime_type": self.mime_type,
+            "studies": self.studies,
+        }

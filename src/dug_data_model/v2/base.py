@@ -37,10 +37,22 @@ class References:
     assigned after loading is caught. On a
     class that leaves it a free string, an empty value skips the type check: producers older
     than the check, such as the HEAL CDE output, write `parents` without `parent_type`.
+
+    `inherited` marks a field that names every ancestor of `element_type`, at any depth, as
+    v2's `studies` does. Such a field is derived from the tree, so `validate_references()`
+    checks that it names exactly the element's parents of that type plus whatever the same
+    field names on its other parents.
+
+    There is no marker for a list of children, because no element has one: a child names its
+    parent in `parents`, and nothing lists its children (see v2's `DugStudy` for why). An earlier
+    version had `children=True` on `document_list`, `resource_list` and `content_list` and
+    checked that each agreed with its members' `parents`; the lists went, and the check with
+    them.
     """
 
     element_type: str = ""
     type_from: str = ""
+    inherited: bool = False
 
     @staticmethod
     @cache
@@ -65,6 +77,29 @@ class References:
                     "does not name a field"
                 )
         return fields
+
+
+@dataclass(frozen=True)
+class FromParents:
+    """Marks a field that repeats the same field on each of the element's parents.
+
+    A copy lets an element that Dug indexes and returns on its own carry what it needs from
+    its parent, as v2's `DugContent.license` carries its resource's licence. Copies can drift,
+    so `validate_references()` reports each resolved parent that has the field with a
+    different value::
+
+        license: Annotated[str, FromParents()] = Field(...)
+    """
+
+    @staticmethod
+    @cache
+    def fields_of(model: type[BaseModel]) -> tuple[str, ...]:
+        """Return the names of *model*'s fields that carry `FromParents`, once per class."""
+        return tuple(
+            name
+            for name, field in model.model_fields.items()
+            if any(isinstance(marker, FromParents) for marker in field.metadata)
+        )
 
 
 class DugElement(BaseModel):

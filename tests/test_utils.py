@@ -1,6 +1,9 @@
 """Tests for dug_data_model utility functions."""
 
+import json
+
 import pytest
+from dug_data_model import scaffold
 from dug_data_model.v2 import (
     DugConcept,
     DugVariable,
@@ -15,6 +18,12 @@ from dug_data_model.v2 import (
     build_parent_map,
     get_children,
     dedupe_and_sort,
+    compact_dump,
+    serialize_elements,
+    load_elements,
+    DugElementParsedList,
+    DugContent,
+    DugResource,
 )
 
 
@@ -179,3 +188,78 @@ class TestDedupeAndSort:
     def test_empty_list(self):
         result = dedupe_and_sort([])
         assert result == []
+
+
+# ---------------------------------------------------------------------------
+# compact_dump / serialize_elements(compact=True)
+# ---------------------------------------------------------------------------
+
+class TestCompactDump:
+    def test_keeps_type_even_though_it_is_a_default(self):
+        dumped = compact_dump(DugStudy(id="S", name="Study", description=""))
+        assert dumped == {"id": "S", "type": "study", "name": "Study", "description": ""}
+
+    def test_keeps_type_where_its_default_is_empty(self):
+        dumped = scaffold.compact_dump(scaffold.DugElement(id="e", name="E", description=""))
+        assert dumped == {"id": "e", "type": "", "name": "E", "description": ""}
+
+    def test_writes_defaults_that_say_something(self):
+        # An order or a kind must not change meaning if a later model changes its default.
+        content = compact_dump(DugContent(id="d/h", name="H", description="",
+                                          license="CC-BY-4.0", content="t"))
+        assert content["order"] == 0
+        assert "location" not in content and "parents" not in content
+        variable = compact_dump(DugVariable(id="v", name="V", description=""))
+        assert variable["data_type"] == "text"
+        resource = compact_dump(DugResource(id="r", name="R", description=""))
+        assert "resource_type" not in resource and "repository" not in resource
+
+    def test_keeps_an_emptied_field_whose_default_is_not_empty(self):
+        variable = DugVariable(id="v", name="V", description="", data_type="")
+        assert compact_dump(variable)["data_type"] == ""
+
+    def test_id_type_name_come_first(self):
+        dumped = compact_dump(DugContent(id="d/h", name="H", description="",
+                                         license="CC-BY-4.0", content="t",
+                                         order=2))
+        assert list(dumped)[:3] == ["id", "type", "name"]
+        assert "ml_ready_desc" not in dumped
+
+    def test_leaves_ml_ready_desc_out_of_concepts_at_every_depth(self):
+        inner = DugConcept(id="c2", name="Inner", description="d2")
+        middle = DugConcept(id="c1", name="Middle", description="d1", concepts={"c2": inner})
+        variable = DugVariable(id="v1", name="V", description="d", concepts={"c1": middle})
+        dumped = compact_dump(variable)
+        assert "ml_ready_desc" not in json.dumps(dumped)
+        assert dumped["concepts"]["c1"]["concepts"]["c2"]["name"] == "Inner"
+
+    def test_round_trips_through_the_model(self):
+        content = DugContent(id="d/h", name="H", description="",
+                             license="CC-BY-4.0", content="text", order=3,
+                             parents=["d"])
+        (restored,) = DugElementParsedList.validate_python([compact_dump(content)])
+        assert restored == content
+
+    def test_serialize_compact_then_load(self, tmp_path):
+        elements = [DugStudy(id="S", name="Study", description=""),
+                    DugContent(id="S/c", name="H", description="",
+                               license="CC-BY-4.0", content="t", location="page 2")]
+        path = tmp_path / "out.json"
+        serialize_elements(elements, path, compact=True)
+        assert '"ml_ready_desc"' not in path.read_text()
+        assert load_elements(path, DugElementParsedList) == elements
+
+    def test_serialize_compact_passes_jsonable_objects_to_complex_handler(self, tmp_path):
+        # Identifier and answer objects in a concept's `Any` fields have jsonable() but are
+        # unknown to pydantic, so a JSON-mode dump would raise on them.
+        class Identifier:
+            def jsonable(self):
+                return {"id": "MONDO:1", "label": "thing"}
+
+        concept = DugConcept(id="c1", name="C", description="d",
+                             identifiers={"MONDO:1": Identifier()})
+        path = tmp_path / "out.json"
+        serialize_elements([concept], path, compact=True)
+        assert json.loads(path.read_text())[0]["identifiers"] == {
+            "MONDO:1": {"id": "MONDO:1", "label": "thing"}
+        }

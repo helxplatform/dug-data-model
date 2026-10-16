@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Iterable
+from functools import cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, TypeVar
 
@@ -65,10 +66,71 @@ def dedupe_and_sort(items: list[str]) -> list[str]:
     return sorted(set(items))
 
 
+def compact_dump(element: DugElement) -> dict[str, Any]:
+    """Return *element* as a dict with empty fields left out.
+
+    For files that people read and review: a field is omitted when it is still at its
+    default and that default is empty (`""`, `[]`, `{}` or `None`), as is the computed
+    `ml_ready_desc`, which repeats the description. Loading the result through
+    `DugElementParsedList` restores every omitted field. A field whose default says
+    something -- `order=0`, `data_type="text"` -- is always written, so that a file keeps
+    its meaning if a later model changes that default. (`exclude_defaults=True` was tried first
+    and dropped those too.) `type` is always written, even where its default is empty, as on
+    the scaffold's `DugElement`, because it is what a file is loaded back by. `id`, `type` and
+    `name` come first so the file scans top-down. `ml_ready_desc` is also left out of the concepts in `concepts`,
+    the only base field that holds other elements, and of the concepts in theirs, at any depth.
+
+    This dumps in Python mode, like `serialize_elements()`'s default path, so that objects
+    in `Any` fields (such as identifier objects in `DugConcept.identifiers`) reach
+    `complex_handler()`. `mode="json"` would make pydantic raise on them instead.
+    """
+    dumped = element.model_dump(exclude=_compact_exclude(element))
+    return {"id": dumped.pop("id"), "type": dumped.pop("type"), "name": dumped.pop("name"), **dumped}
+
+
+def _is_empty(value: Any) -> bool:
+    return value is None or (isinstance(value, (str, list, dict)) and not value)
+
+
+def _compact_exclude(element: DugElement) -> dict[str, Any]:
+    """Return the `model_dump()` exclude spec for `compact_dump()`.
+
+    It names `ml_ready_desc` and every field still at an empty default, on *element* and on
+    each concept in its `concepts`, at any depth. `concepts` is keyed by each concept's
+    actual ID because a concept may hold concepts of its own; `"__all__"` would reach only
+    one level down.
+    """
+    exclude: dict[str, Any] = {"ml_ready_desc": True}
+    for name, default in _empty_defaults(type(element)):
+        if getattr(element, name) == default:
+            exclude[name] = True
+    if "concepts" not in exclude:
+        exclude["concepts"] = {
+            key: _compact_exclude(concept) for key, concept in element.concepts.items()
+        }
+    return exclude
+
+
+@cache
+def _empty_defaults(cls: type[DugElement]) -> tuple[tuple[str, Any], ...]:
+    """Return the name and default of each of *cls*'s fields whose default is empty.
+
+    `type` is left out, since `compact_dump()` always writes it. The defaults are built once
+    per class rather than once per element, and are only compared against, never handed out,
+    so sharing a `[]` between calls is safe.
+    """
+    return tuple(
+        (name, default)
+        for name, field in cls.model_fields.items()
+        if name != "type" and _is_empty(default := field.get_default(call_default_factory=True))
+    )
+
+
 def serialize_elements(
     elements: Iterable[DugElement],
     path: str | Path,
     indent: int | None = 2,
+    compact: bool = False,
 ) -> None:
     """Serialize a collection of elements to a JSON file.
 
@@ -76,6 +138,8 @@ def serialize_elements(
         elements: An iterable of DugElement objects to serialize.
         path: The file path to write to.
         indent: JSON indentation level (default: 2). Use None for compact output.
+        compact: Write each element with `compact_dump()`, leaving out fields still at
+            their defaults, for a file that people will read and review.
 
     Example:
         from dug_data_model.scaffold import DugElement, serialize_elements
@@ -87,7 +151,7 @@ def serialize_elements(
         serialize_elements(elements, "output.json")
     """
     path = Path(path)
-    data = [elem.model_dump() for elem in elements]
+    data = [compact_dump(elem) if compact else elem.model_dump() for elem in elements]
     with path.open("w") as f:
         json.dump(data, f, indent=indent, default=complex_handler)
 
@@ -543,7 +607,8 @@ def generate_markdown_schema(
         lines.append("|-------|------|----------|---------|-------------|")
 
         for field_name, field_schema in properties.items():
-            field_type = _get_type_display(field_schema, defs)
+            # A union of Literal values displays as `"a" | "b"`, whose pipes would end the cell.
+            field_type = _escape_md(_get_type_display(field_schema, defs))
             is_required = field_name in required
             required_str = "Yes" if is_required else "No"
 
