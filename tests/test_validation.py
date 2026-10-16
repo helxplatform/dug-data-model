@@ -241,6 +241,14 @@ class TestInconsistentReferences:
             "own: parents lead back to own (own -> own)",
         ]
 
+    def test_a_cycle_is_reported_once_when_a_parent_is_named_twice(self):
+        own = _Node(id="own", name="O", description="", parents=["own", "own"],
+                    parent_type="node")
+        twin = _Node(id="own", name="O", description="", parents=["own"], parent_type="node")
+        assert find_inconsistent_references([own, twin]) == [
+            "own: parents lead back to own (own -> own)",
+        ]
+
     def test_shared_ancestors_are_not_a_cycle(self):
         # Two paths up to the same study meet, but never return to where they began.
         study = DugStudy(id="s1", name="Study", description="desc")

@@ -289,7 +289,8 @@ def _parent_cycles(by_id: _Index) -> list[str]:
     problems: list[str] = []
 
     def parents_of(id_: str) -> Iterator[str]:
-        return iter([p for elem in by_id[id_] for p in elem.parents if p in by_id])
+        # Deduped, or a parent named twice would report its cycle twice.
+        return iter(dict.fromkeys(p for elem in by_id[id_] for p in elem.parents if p in by_id))
 
     for start in by_id:
         if start in state:
