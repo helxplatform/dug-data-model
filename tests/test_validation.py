@@ -8,6 +8,7 @@ from pydantic import Field
 from dug_data_model.v2 import (
     DugElement,
     DugContent,
+    DugSection,
     DugStudy,
     DugVariable,
     DugResource,
@@ -189,13 +190,32 @@ class TestInconsistentReferences:
             "c: parents names s1, a study, not a resource",
         ]
 
-    def test_parents_need_a_parent_type(self):
+    def test_parents_need_a_parent_type_where_the_class_narrows_it(self):
         study = DugStudy(id="s1", name="Study", description="desc")
         resource = DugResource(id="r", name="R", description="", parents=["s1"], studies=["s1"])
-        variable = DugVariable(id="v", name="V", description="", parents=["s1"])
-        assert find_inconsistent_references([study, resource, variable]) == [
+        assert find_inconsistent_references([study, resource]) == [
             "r: parents is set but parent_type is empty",
-            "v: parents is set but parent_type is empty",
+        ]
+
+    def test_a_free_parent_type_is_checked_only_when_set(self):
+        # The HEAL CDE output writes variables and sections with parents and no parent_type.
+        study = DugStudy(id="s1", name="Study", description="desc")
+        section = DugSection(id="crf", name="CRF", description="", parents=["s1"])
+        variable = DugVariable(id="v", name="V", description="", parents=["crf"])
+        assert find_inconsistent_references([study, section, variable]) == []
+        variable.parent_type = "study"
+        assert find_inconsistent_references([study, section, variable]) == [
+            "v: parents names crf, a section, not a study",
+        ]
+
+    def test_a_parent_type_without_parents(self):
+        # Content's parent_type is always 'resource', so content with no parents is caught.
+        orphan = DugContent(id="c", name="C", description="", license="CC-BY-4.0", content="t")
+        lost = DugResource(id="r", name="R", description="", parent_type="study")
+        top = DugResource(id="site", name="Program website", description="")
+        assert find_inconsistent_references([orphan, lost, top]) == [
+            "c: parent_type is 'resource' but parents is empty",
+            "r: parent_type is 'study' but parents is empty",
         ]
 
     def test_a_parent_type_assigned_after_loading_is_checked(self):
@@ -303,8 +323,7 @@ class TestInconsistentReferences:
     def test_content_licence_is_not_checked_without_a_resolved_parent(self):
         content = DugContent(id="c", name="C", description="", license="CC0-1.0", content="",
                              parents=["gone"])
-        loose = DugContent(id="c2", name="C", description="", license="", content="")
-        assert find_inconsistent_references([content, loose]) == []
+        assert find_inconsistent_references([content]) == []
 
     def test_a_type_assigned_after_loading_is_checked(self):
         # Otherwise a resource renamed to "study" would satisfy a reference to a study.

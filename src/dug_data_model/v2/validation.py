@@ -139,9 +139,12 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     - Every element's `type` must be one its class allows, so that an element whose `type`
       was changed after loading cannot pass for another kind (`_not_allowed()`).
     - Each referenced element must have the `type` that its field's `References` marker
-      declares: `element_type`, or for `parents` the element's `parent_type`. An element that
-      names parents must say what type they are, and when its class narrows `parent_type` to
-      a `Literal`, the value must be one it allows (`_reference_field_problems()`).
+      declares: `element_type`, or for `parents` the element's `parent_type`. When its class
+      narrows `parent_type` to a `Literal`, as resources and content do, the value must be
+      one it allows, an element that names parents must say what type they are, and one that
+      says must name them. Where `parent_type` is the base class's free string, as on
+      variables and sections, it is checked only when set, since producers written before
+      this check (the HEAL CDE output, for one) leave it empty (`_reference_field_problems()`).
     - A field marked `inherited`, such as `studies`, must name exactly what the element's
       parents imply: the parents of its `element_type`, and whatever the same field names on
       the other parents (`_inherited_problem()`).
@@ -239,9 +242,12 @@ def _reference_field_problems(
 ) -> list[str]:
     """Return the problems with one of *elem*'s `References` fields.
 
-    The field's `type_from`, if it has one, is checked first, and a bad or empty value there
-    stops the field's other checks, since they would only repeat it: then that each resolved
-    target has the expected type, and that an `inherited` field names what the parents imply.
+    The field's `type_from`, if it has one, is checked first, and a bad value there, or one
+    set without the references or the references without it, stops the field's other
+    checks, since they would only repeat it: then that each resolved target has the expected
+    type, and that an `inherited` field names what the parents imply. Only a class that
+    narrows `type_from` to a `Literal` must set it with the references; on any other class an
+    empty one skips the type check.
     """
     refs = getattr(elem, field_name)
     expected = marker.element_type
@@ -249,8 +255,11 @@ def _reference_field_problems(
         expected = getattr(elem, marker.type_from)
         if problem := _not_allowed(elem, marker.type_from):
             return [problem]
-        if refs and not expected:
-            return [f"{elem.id}: {field_name} is set but {marker.type_from} is empty"]
+        if _literal_values(type(elem), marker.type_from) is not None:
+            if refs and not expected:
+                return [f"{elem.id}: {field_name} is set but {marker.type_from} is empty"]
+            if expected and not refs:
+                return [f"{elem.id}: {marker.type_from} is {expected!r} but {field_name} is empty"]
     if not expected:
         return []
     problems = [

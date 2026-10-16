@@ -30,9 +30,11 @@ class References:
 
     `element_type` is the `type` the referenced elements should have. When that varies, it is
     empty and `type_from` names the field of the same element that gives it, as `parent_type`
-    does for `parents`. That field must be set whenever the references are, and when a class
-    narrows it to a `Literal`, `validate_references()` checks the value against it again, so
-    that one assigned after loading is caught.
+    does for `parents`. When a class narrows that field to a `Literal`, it must be set
+    whenever the references are and not without them, and `validate_references()` checks the
+    value against the `Literal` again, so that one assigned after loading is caught. On a
+    class that leaves it a free string, an empty value skips the type check: producers older
+    than the check, such as the HEAL CDE output, write `parents` without `parent_type`.
 
     `inherited` marks a field that names every ancestor of `element_type`, at any depth, as
     v2's `studies` does. Such a field is derived from the tree, so `validate_references()`
@@ -119,7 +121,7 @@ class DugElement(BaseModel):
     """IDs of parent elements in the hierarchy."""
 
     parent_type: str = ""
-    """Type of the parent elements (e.g., 'study', 'section')."""
+    """Type of the parent elements (e.g., 'study', 'section'); every parent has this one type."""
 
     concepts: dict[str, "DugConcept"] = Field(default_factory=dict)
     """Mapping of concept IDs to DugConcept objects linked to this element."""
