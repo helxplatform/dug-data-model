@@ -68,7 +68,17 @@ elements = DugElementParsedList.validate_python(data)
 
 ## Scaffold: Creating a New Model Version
 
-Use the scaffold CLI to generate a new data model version inside the package:
+Use the scaffold CLI to generate a new data model version inside the package. It copies the
+scaffold's files rather than importing them, so a released version does not change when the
+scaffold does.
+
+The scaffold is also the template for every later version, so a change that is not specific
+to one version belongs in the scaffold as well, in the same pull request; nothing copies it
+across at release time. `utils.py` and `validation.py` do not depend on the version at all, so
+they are kept identical in the scaffold and in `v2/`, and `tests/test_scaffold_copies.py`
+fails if a fix to one is forgotten in the other. `base.py`, `concept.py` and `types.py` are
+where a version defines its own elements, so they may differ (v2's `base.py` adds `tags`, and
+its `types.py` fills in `Indexable`), but a fix to the code they share goes in both.
 
 ```bash
 # Create v3 of the data model
