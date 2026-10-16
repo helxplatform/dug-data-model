@@ -9,7 +9,7 @@ Mellon University). It is a frozen example of the shape, refreshed when the mode
 not a contract with that producer.
 
 It is a copy of the producer's examples/HDP00009/HDP00009.json (its improve-ddm-v2 branch,
-2026-10-15), unedited; refresh it when that file changes. The study carries only `appl_id`:
+2026-10-16), unedited; refresh it when that file changes. The study carries only `appl_id`:
 where the deposits were downloaded from is on each deposit's `action`, not repeated on the
 study, and the study has no `action` of its own, since its link is the HEAL Platform's to set.
 """
