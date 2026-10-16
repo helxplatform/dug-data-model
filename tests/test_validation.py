@@ -297,6 +297,16 @@ class TestReferenceFieldsAreMarked:
                        file_list=[{"name": "README.pdf"}])
         assert find_missing_references([elem]) == {}
 
+    def test_type_from_must_name_a_field(self):
+        class Misnamed(DugElement):
+            see_also: Annotated[list[str], References(type_from="see_also_typ")] = Field(
+                default_factory=list
+            )
+
+        elem = Misnamed(id="m", name="M", description="")
+        with pytest.raises(TypeError, match=r"Misnamed\.see_also: .*'see_also_typ'"):
+            find_inconsistent_references([elem])
+
     def test_a_marked_field_is_a_reference_whatever_its_name(self):
         elem = _Tagged(id="t1", name="T", description="", see_also=["t2"])
         assert find_missing_references([elem]) == {"see_also": {"t2"}}
