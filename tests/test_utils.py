@@ -207,8 +207,8 @@ class TestCompactDump:
         # An order or a kind must not change meaning if a later model changes its default.
         content = compact_dump(DugContent(id="d/h", name="H", description="",
                                           license="CC-BY-4.0", content="t"))
-        assert content["position"] == 0
-        assert "level" not in content and "parents" not in content
+        assert content["order"] == 0
+        assert "location" not in content and "parents" not in content
         variable = compact_dump(DugVariable(id="v", name="V", description=""))
         assert variable["data_type"] == "text"
         resource = compact_dump(DugResource(id="r", name="R", description=""))
@@ -221,7 +221,7 @@ class TestCompactDump:
     def test_id_type_name_come_first(self):
         dumped = compact_dump(DugContent(id="d/h", name="H", description="",
                                          license="CC-BY-4.0", content="t",
-                                         position=2))
+                                         order=2))
         assert list(dumped)[:3] == ["id", "type", "name"]
         assert "ml_ready_desc" not in dumped
 
@@ -235,7 +235,7 @@ class TestCompactDump:
 
     def test_round_trips_through_the_model(self):
         content = DugContent(id="d/h", name="H", description="",
-                             license="CC-BY-4.0", content="text", position=3,
+                             license="CC-BY-4.0", content="text", order=3,
                              parents=["d"])
         (restored,) = DugElementParsedList.validate_python([compact_dump(content)])
         assert restored == content
@@ -243,7 +243,7 @@ class TestCompactDump:
     def test_serialize_compact_then_load(self, tmp_path):
         elements = [DugStudy(id="S", name="Study", description=""),
                     DugContent(id="S/c", name="H", description="",
-                               license="CC-BY-4.0", content="t", page=2)]
+                               license="CC-BY-4.0", content="t", location="page 2")]
         path = tmp_path / "out.json"
         serialize_elements(elements, path, compact=True)
         assert '"ml_ready_desc"' not in path.read_text()

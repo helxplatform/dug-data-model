@@ -40,7 +40,7 @@ class DugContent(DugElement):
 
     Content is a separate element, not a list inside its resource, because Dug annotates and
     indexes each element on its own: a section is sent to the annotator as one bounded text
-    and comes back as its own search hit, with `page` and `position` to point at. Embedded
+    and comes back as its own search hit, with `order` and `location` to point at. Embedded
     in the resource, the text would be annotated as one PDF-sized string, or not at all, and
     returned whole with every hit on the resource (see docs/how-dug-uses-elements.md).
     """
@@ -50,12 +50,15 @@ class DugContent(DugElement):
         "resource", description="Always 'resource': content is a piece of a DugResource's text."
     )
 
-    position: int = Field(0, ge=0, description="0-based order of this content within its resource.")
-    level: int | None = Field(
-        None, ge=1, description="Heading depth (1 = top level) when the source format exposes it."
+    order: int = Field(
+        0, ge=0, description="0-based order of this content within its resource, for sorting."
     )
-    page: int | None = Field(
-        None, ge=1, description="1-based page this content starts on, for paginated formats."
+    location: str | None = Field(
+        None,
+        description=(
+            "Where this content starts in the file, in whatever terms suit the format "
+            "('page 3', 'line 17', 'Data!A1:F120'), for a person to find it; not parsed."
+        ),
     )
     content: str = Field(
         description=(
@@ -96,9 +99,8 @@ class DugContent(DugElement):
         es_elem = super().get_searchable_dict()
         return {
             **es_elem,
-            "position": self.position,
-            "level": self.level,
-            "page": self.page,
+            "order": self.order,
+            "location": self.location,
             "content": self.content,
             "studies": self.studies,
             "license": self.license,

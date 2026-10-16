@@ -196,7 +196,7 @@ section = DugContent(
     content="README\n\nThis readme document describes the organized behavior "
             "assessment with analysis. ...",  # the text under the heading
     action=readme.action,                    # where to read the text at its source
-    position=0, page=1,
+    order=0, location="page 1",             # for sorting; where a person finds the text
     parents=[readme.id], parent_type="resource",
     studies=["HDP00009"],
     license=readme.license,                  # a copy, so that a hit carries the terms of its text
@@ -256,7 +256,7 @@ Recorded so that the next person does not go the same way.
   that.
 - **Child lists** (`document_list`, `resource_list`, `content_list`, and before them
   `DugStudy.document_list` and `resource_list`), validated in both directions against
-  `parents`. Dug never read them, reading order is in `DugContent.position`, and the
+  `parents`. Dug never read them, reading order is in `DugContent.order`, and the
   multi-producer argument that removed them from the study applies one level down too.
 - **Content embedded in its resource** as a list, so that a producer emits one object per
   file. Dug annotates and indexes each element on its own, so embedded text would be sent
@@ -284,7 +284,7 @@ not schema: nothing here is validated.
   is inside another resource. A file is `<study>/assets/<path under assets/>`, its place in
   the curated inputs, whichever resource it hangs off, so that re-curating where a file came
   from does not change its ID. A content element is `<file>/<heading-slug>`, with `_2`, `_3`
-  on repeated headings and `section-N` (N = 1-based position) when a heading has nothing
+  on repeated headings and `section-N` (N = 1-based order) when a heading has nothing
   sluggable in it. A resource that belongs to several studies (a paper two studies cite)
   should get one ID that embeds neither study, with both in `parents` and `studies`; the
   producer does not do this yet, as it works one study at a time.

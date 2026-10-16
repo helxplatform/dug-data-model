@@ -167,25 +167,24 @@ class TestDugContent:
                        license="CC-BY-4.0", content=content)
         assert c.ml_ready_desc == expected
 
-    def test_level_and_page_are_one_based(self):
-        DugContent(id="x", name="x", description="",
-                   license="CC-BY-4.0", content="x", level=1, page=1)
+    def test_location_is_free_text_per_format(self):
+        for location in ("page 3", "line 17", "Data!A1:F120"):
+            DugContent(id="x", name="x", description="",
+                       license="CC-BY-4.0", content="x", location=location)
 
-    @pytest.mark.parametrize("bad", [{"position": -1}, {"level": 0}, {"page": 0}])
-    def test_out_of_range_position_level_or_page_rejected(self, bad):
+    def test_negative_order_rejected(self):
         with pytest.raises(ValidationError):
-            DugContent(id="x", name="x", description="", license="CC-BY-4.0", content="x", **bad)
+            DugContent(id="x", name="x", description="", license="CC-BY-4.0", content="x", order=-1)
 
     def test_searchable_and_response_dicts_carry_the_text(self):
         c = DugContent(id="d1/intro", name="Intro", description="",
                        license="CC-BY-4.0", content="Text",
-                       position=2, level=1, page=3, studies=["s1"])
+                       order=2, location="page 3", studies=["s1"])
         es = c.get_searchable_dict()
         assert es["element_type"] == "content"
         assert es["studies"] == ["s1"]
-        assert es["position"] == 2
-        assert es["level"] == 1
-        assert es["page"] == 3
+        assert es["order"] == 2
+        assert es["location"] == "page 3"
         assert es["content"] == "Text"
         assert es["license"] == "CC-BY-4.0"
         assert es["description"] == ""
@@ -412,7 +411,7 @@ class TestDugElementParsedList:
                         studies=["s1"], license="CC-BY-4.0"),
             DugContent(id="r1/readme/intro", name="Intro", description="",
                        license="CC-BY-4.0", content="Text",
-                       position=0, page=1, parents=["r1/readme"], parent_type="resource",
+                       order=0, location="page 1", parents=["r1/readme"], parent_type="resource",
                        studies=["s1"]),
         ]
         path = tmp_path / "out.json"

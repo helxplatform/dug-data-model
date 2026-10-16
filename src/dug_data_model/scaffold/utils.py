@@ -73,7 +73,7 @@ def compact_dump(element: DugElement) -> dict[str, Any]:
     default and that default is empty (`""`, `[]`, `{}` or `None`), as is the computed
     `ml_ready_desc`, which repeats the description. Loading the result through
     `DugElementParsedList` restores every omitted field. A field whose default says
-    something -- `position=0`, `data_type="text"` -- is always written, so that a file keeps
+    something -- `order=0`, `data_type="text"` -- is always written, so that a file keeps
     its meaning if a later model changes that default. (`exclude_defaults=True` was tried first
     and dropped those too.) `type` is always written, even where its default is empty, as on
     the scaffold's `DugElement`, because it is what a file is loaded back by. `id`, `type` and

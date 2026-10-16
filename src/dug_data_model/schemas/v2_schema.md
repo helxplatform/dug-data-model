@@ -65,7 +65,7 @@ producer's decision, not an error.
 
 Content is a separate element, not a list inside its resource, because Dug annotates and
 indexes each element on its own: a section is sent to the annotator as one bounded text
-and comes back as its own search hit, with `page` and `position` to point at. Embedded
+and comes back as its own search hit, with `order` and `location` to point at. Embedded
 in the resource, the text would be annotated as one PDF-sized string, or not at all, and
 returned whole with every hit on the resource (see docs/how-dug-uses-elements.md).
 
@@ -84,9 +84,8 @@ returned whole with every hit on the resource (see docs/how-dug-uses-elements.md
 | `optional_terms` | `list[str]` | No | - |  |
 | `metadata` | `dict[str, any]` | No | - |  |
 | `tags` | `list[dict[str, str]]` | No | - |  |
-| `position` | `int` | No | `0` | 0-based order of this content within its resource. |
-| `level` | `int` | No | `None` | Heading depth (1 = top level) when the source format exposes it. |
-| `page` | `int` | No | `None` | 1-based page this content starts on, for paginated formats. |
+| `order` | `int` | No | `0` | 0-based order of this content within its resource, for sorting. |
+| `location` | `str` | No | `None` | Where this content starts in the file, in whatever terms suit the format ('page 3', 'line 17', 'Data!A1:F120'), for a person to find it; not parsed. |
 | `content` | `str` | Yes | - | The text under the heading. Required, so that a file written when the text was held in `description` fails to load instead of loading with no text. |
 | `studies` | `list[str]` | No | - | IDs of the studies this content belongs to, as on DugResource. |
 | `license` | `str` | Yes | - | The licence of the resource this text came from, copied so that each hit carries it; must equal the parent's `license`. |
