@@ -270,6 +270,12 @@ Recorded so that the next person does not go the same way.
 - **Content with no licence of its own**, the licence stated once on the resource. A content
   hit could not show its terms without a second lookup, which Dug cannot make while indexing
   one element at a time, and content with no parent, or two, had no clear licence at all.
+- **Typed locations on content** (`page`, with `level` for heading depth). A page is real
+  in a PDF, but moves when a Word file reflows, and a spreadsheet has cells and a text file
+  lines, so content has free-text `location` instead, for a person to find the text, and
+  `order` for sorting. `level` was no location and nothing read it; add it back when a UI
+  renders a table of contents. A separate `heading` field would repeat `name`, which is the
+  heading on every content element.
 
 #### Reference producer conventions
 
