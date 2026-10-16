@@ -14,7 +14,12 @@ Notes for agents and people. The README is the reference; this is what is easy t
   heal-non-data-dictionaries' `examples/HDP00009/HDP00009.json` (`tests/test_fixtures.py`
   says which branch and when). Keep it loading through `validate_references()` and
   round-tripping through `compact_dump()`; a model change that breaks it needs the producer
-  changed too, or the fixture refreshed from it.
+  changed too, or the fixture refreshed from it. That fixture is one study; to check a
+  change against all of that producer's examples and inputs, run in its checkout
+  `uv run --group dev --with-editable <this checkout> pytest tests/test_model_conformance.py`
+  and `uv run --with-editable <this checkout> ingest.py data/inputs -o <new dir>` (the ingest
+  validates each study's references), or, once the change is pushed, its `Model` workflow
+  with this branch as `model-ref` (`gh workflow run model.yml -f model-ref=<branch>` there).
 - **What each `RESOURCE_KINDS` value means is in `docs/resource-kinds.md`**, not the code.
   Adding, removing or reordering a kind means changing both; `tests/test_model.py` fails
   unless the doc's `###` headings are exactly the tuple, in order.
