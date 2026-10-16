@@ -41,7 +41,12 @@ one Elasticsearch document.
   `mime_type`, `studies`, `content`, `position`, `level`, `page` -- needs a mapping before an element carrying it can be
   indexed, in an extended mapping or a new index. `metadata` is the one place a producer can
   put a new key without a Dug change, which is why the reference producer keeps a file
-  inventory, a PubMed ID and related identifiers there.
+  inventory, a PubMed ID and related identifiers there. A field the model drops is the
+  reverse case: a study's searchable dict no longer has `publications`. The studies mapping
+  still lists it, and a strict mapping accepts a document without a field it lists, so
+  indexing is unaffected. But Dug's `tests/unit/test_parsers.py` expects the key in
+  `test_dug_study`, and `server.py` documents it in the study listing, so both change when
+  Dug moves to this version.
 
 ## Searching
 
