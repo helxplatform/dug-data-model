@@ -2,6 +2,24 @@
 
 Reusable data model for the [Dug](https://github.com/helxplatform/dug) semantic search system.
 
+Besides studies, variables and concepts, the model has two element types for what a study
+links to, and which parents each may have is central to the design:
+
+- A **`DugResource`** may hang off a `DugStudy` or another `DugResource`, and nothing else.
+  One that hangs off its study is a *study resource*: a top-level thing the study links to,
+  such as a repository deposit, a publication or a project website. One that hangs off
+  another resource is a *subresource*, such as one file in a deposit or a paper's PDF.
+- A **`DugContent`** may hang off a `DugResource` only: it is a searchable piece of that
+  resource's text.
+
+`validate_references()` checks that every `parents` ID names an element of an allowed type,
+and that `parents` never goes round in a cycle, so a resource can never end up as its own
+parent or ancestor. The three layers are expected to reach search at different times: study
+resources first (likely the first target for HEAL Semantic Search, since they include
+publications and repositories, the two kinds most useful to it), subresources later, to
+point at individual files in repositories, and content only after more thought about what
+searching it should offer.
+
 This package provides:
 1. **Versioned data models** (e.g., `v2/`) - Ready-to-use Pydantic models for Dug-indexed data
 2. **Scaffold** - A CLI tool for bootstrapping new data model versions
