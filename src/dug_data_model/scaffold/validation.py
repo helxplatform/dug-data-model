@@ -139,9 +139,10 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
     - Each referenced element must have the `type` that its field's `References` marker
       declares: `element_type`, or for `parents` the element's `parent_type`. When its class
       narrows `parent_type` to a `Literal`, the value must be one it allows, an element that
-      names parents must say what type they are, and one that says must name them. Where `parent_type` is the base class's free string, as on
-      variables and sections, it is checked only when set, since producers written before
-      this check (the HEAL CDE output, for one) leave it empty (`_reference_field_problems()`).
+      names parents must say what type they are, and one that says must name them. Where
+      `parent_type` is the base class's free string, as on variables and sections, it is
+      checked only when set, since producers written before this check (the HEAL CDE output,
+      for one) leave it empty (`_reference_field_problems()`).
     - `parents` may not go round in a cycle, which no tree can contain (`_parent_cycles()`).
 
     Loading enforces the `Literal` types too, but pydantic does not validate assignment, so
@@ -266,8 +267,7 @@ def _not_allowed(elem: DugElement, field_name: str) -> str:
     value = getattr(elem, field_name)
     if allowed is None or value in allowed:
         return ""
-    choices = ", ".join(repr(v) for v in sorted(map(str, allowed)))
-    return f"{elem.id}: {field_name} is {value!r}, not one of {choices}"
+    return f"{elem.id}: {field_name} is {value!r}, not one of {', '.join(repr(v) for v in sorted(map(str, allowed)))}"
 
 
 def _parent_cycles(by_id: _Index) -> list[str]:
