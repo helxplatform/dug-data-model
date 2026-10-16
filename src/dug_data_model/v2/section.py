@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
 from pydantic import Field
 
-from .base import DugElement
+from .base import DugElement, References
 
 SECTION_TYPE = "section"
 
@@ -12,7 +12,7 @@ SECTION_TYPE = "section"
 class DugSection(DugElement):
     type: Literal["section"] = SECTION_TYPE
     is_crf: bool = False
-    variable_list: list[str] = Field(default_factory=list)
+    variable_list: Annotated[list[str], References("variable")] = Field(default_factory=list)
 
     def get_searchable_dict(self) -> dict[str, Any]:
         es_elem = super().get_searchable_dict()

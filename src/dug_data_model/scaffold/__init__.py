@@ -87,7 +87,7 @@ KG answer objects should have:
     - ``get_node_synonyms()``: Method returning list of node synonyms
 """
 
-from .base import DugElement
+from .base import DugElement, References
 from .concept import CONCEPT_TYPE, DugConcept
 from .types import InputFile
 from .utils import (
@@ -107,8 +107,12 @@ from .utils import (
 )
 from .validation import (
     DuplicateIdError,
+    InconsistentReferenceError,
     MissingReferenceError,
     find_duplicate_ids,
+    find_inconsistent_references,
+    find_missing_references,
+    validate_references,
     validate_unique_ids,
 )
 
@@ -119,6 +123,7 @@ DugConcept.model_rebuild()
 __all__ = [
     # Core classes
     "DugElement",
+    "References",
     "DugConcept",
     # Constants
     "CONCEPT_TYPE",
@@ -143,7 +148,11 @@ __all__ = [
     "serialize_elements",
     # Validation
     "DuplicateIdError",
+    "InconsistentReferenceError",
     "MissingReferenceError",
     "find_duplicate_ids",
+    "find_inconsistent_references",
+    "find_missing_references",
+    "validate_references",
     "validate_unique_ids",
 ]
