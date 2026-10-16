@@ -7,7 +7,9 @@ entities inherit from.
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING, Any
+from dataclasses import dataclass
+from functools import cache
+from typing import TYPE_CHECKING, Annotated, Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field
 
@@ -15,6 +17,42 @@ from .utils import complex_handler, dedupe_and_sort
 
 if TYPE_CHECKING:
     from .concept import DugConcept
+
+
+@dataclass(frozen=True)
+class References:
+    """Marks a `list[str]` field as holding the IDs of other elements.
+
+    `validate_references()` checks the fields that carry this marker, and only those, so a
+    field is never taken for a list of IDs because of its name::
+
+        variable_list: Annotated[list[str], References("variable")] = Field(default_factory=list)
+
+    `element_type` is the `type` the referenced elements should have. When that varies, it is
+    empty and `type_from` names the field of the same element that gives it, as `parent_type`
+    does for `parents`. When a class narrows that field to a `Literal`, it must be set
+    whenever the references are and not without them, and `validate_references()` checks the
+    value against the `Literal` again, so that one assigned after loading is caught. On a
+    class that leaves it a free string, an empty value skips the type check: producers older
+    than the check, such as the HEAL CDE output, write `parents` without `parent_type`.
+    """
+
+    element_type: str = ""
+    type_from: str = ""
+
+    @staticmethod
+    @cache
+    def fields_of(model: type[BaseModel]) -> tuple[tuple[str, References], ...]:
+        """Return the name and marker of each of *model*'s fields that carries `References`.
+
+        Worked out once per class, so call it rather than scanning `model_fields` again.
+        """
+        return tuple(
+            (name, marker)
+            for name, field in model.model_fields.items()
+            for marker in field.metadata
+            if isinstance(marker, References)
+        )
 
 
 class DugElement(BaseModel):
@@ -44,11 +82,11 @@ class DugElement(BaseModel):
     action: str = ""
     """URL or action identifier associated with this element."""
 
-    parents: list[str] = Field(default_factory=list)
+    parents: Annotated[list[str], References(type_from="parent_type")] = Field(default_factory=list)
     """IDs of parent elements in the hierarchy."""
 
     parent_type: str = ""
-    """Type of the parent elements (e.g., 'study', 'section')."""
+    """Type of the parent elements (e.g., 'study', 'section'); every parent has this one type."""
 
     concepts: dict[str, "DugConcept"] = Field(default_factory=dict)
     """Mapping of concept IDs to DugConcept objects linked to this element."""
@@ -72,6 +110,9 @@ class DugElement(BaseModel):
         # __pydantic_fields_set__ may not exist yet, old serialized data may contain
         # removed fields (e.g. concept_action), and computed properties (e.g.
         # ml_ready_desc) have no setter. Handle all three cases gracefully.
+        # Catching ValueError also swallows the ValidationError that validate_assignment
+        # would raise, so turning that on validates nothing; validate_references() re-checks
+        # what assignment can break instead (a Literal parent_type, for one).
         try:
             super().__setattr__(name, value)
         except (AttributeError, ValueError):

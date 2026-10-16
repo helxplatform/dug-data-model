@@ -1,4 +1,4 @@
-from .base import DugElement
+from .base import DugElement, References
 from .concept import CONCEPT_TYPE, DugConcept
 from .variable import VARIABLE_TYPE, DugVariable
 from .study import STUDY_TYPE, DugStudy
@@ -28,8 +28,12 @@ from .utils import (
 )
 from .validation import (
     DuplicateIdError,
+    InconsistentReferenceError,
     MissingReferenceError,
     find_duplicate_ids,
+    find_inconsistent_references,
+    find_missing_references,
+    validate_references,
     validate_unique_ids,
 )
 
@@ -43,6 +47,7 @@ DugSection.model_rebuild()
 __all__ = [
     # Core classes
     "DugElement",
+    "References",
     "DugConcept",
     "DugVariable",
     "DugStudy",
@@ -78,7 +83,11 @@ __all__ = [
     "serialize_elements",
     # Validation
     "DuplicateIdError",
+    "InconsistentReferenceError",
     "MissingReferenceError",
     "find_duplicate_ids",
+    "find_inconsistent_references",
+    "find_missing_references",
+    "validate_references",
     "validate_unique_ids",
 ]
