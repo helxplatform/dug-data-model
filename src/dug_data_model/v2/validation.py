@@ -300,7 +300,8 @@ def _not_allowed(elem: DugElement, field_name: str) -> str:
     value = getattr(elem, field_name)
     if allowed is None or value in allowed:
         return ""
-    return f"{elem.id}: {field_name} is {value!r}, not one of {', '.join(repr(v) for v in sorted(map(str, allowed)))}"
+    choices = ", ".join(repr(v) for v in sorted(map(str, allowed)))
+    return f"{elem.id}: {field_name} is {value!r}, not one of {choices}"
 
 
 def _inherited_problem(elem: DugElement, field_name: str, element_type: str, by_id: _Index) -> str:
