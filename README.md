@@ -336,9 +336,9 @@ not schema: nothing here is validated.
 
 Use the scaffold CLI to generate a new data model version inside the package. It copies the
 scaffold's files rather than importing them, so a released version does not change when the
-scaffold does. `utils.py` and `validation.py` do not depend on the version, so they are kept
-identical in the scaffold and in `v2/`: make a fix in both, and `tests/test_scaffold_copies.py`
-fails if one is forgotten.
+scaffold does. `utils.py`, `validation.py` and the `References` class in `base.py` do not
+depend on the version, so they are kept identical in the scaffold and in `v2/`: make a fix in
+both, and `tests/test_scaffold_copies.py` fails if one is forgotten.
 
 ```bash
 # Create v3 of the data model
@@ -401,6 +401,12 @@ class DugStudy(DugElement):
     type: Literal["study"] = "study"
     variable_list: Annotated[list[str], References("variable")] = Field(default_factory=list)
 ```
+
+A class that narrows `parent_type` to a `Literal` is held to it: an element of that class
+that names `parents` must set `parent_type`, and one that sets it must name them. So a
+`Literal` without `""`, such as `Literal["study"] = "study"`, says that every element of the
+class has parents of that type, and one without parents is reported. Include `""`, as in
+`Literal["", "study", "section"] = ""`, if the class can have root elements.
 
 A field that names every ancestor of a type, at any depth, as `studies` does, is marked
 `References("study", inherited=True)`, and `validate_references()` then checks it against the

@@ -31,8 +31,10 @@ class References:
     `element_type` is the `type` the referenced elements should have. When that varies, it is
     empty and `type_from` names the field of the same element that gives it, as `parent_type`
     does for `parents`. When a class narrows that field to a `Literal`, it must be set
-    whenever the references are and not without them, and `validate_references()` checks the
-    value against the `Literal` again, so that one assigned after loading is caught. On a
+    whenever the references are and not without them, so a `Literal` without `""` means every
+    element of the class has references, and one that can have none must allow `""`.
+    `validate_references()` checks the value against the `Literal` again, so that one
+    assigned after loading is caught. On a
     class that leaves it a free string, an empty value skips the type check: producers older
     than the check, such as the HEAL CDE output, write `parents` without `parent_type`.
 
@@ -58,13 +60,23 @@ class References:
         """Return the name and marker of each of *model*'s fields that carries `References`.
 
         Worked out once per class, so call it rather than scanning `model_fields` again.
+
+        Raises:
+            TypeError: If a marker's `type_from` does not name a field of *model*.
         """
-        return tuple(
+        fields = tuple(
             (name, marker)
             for name, field in model.model_fields.items()
             for marker in field.metadata
             if isinstance(marker, References)
         )
+        for name, marker in fields:
+            if marker.type_from and marker.type_from not in model.model_fields:
+                raise TypeError(
+                    f"{model.__name__}.{name}: References(type_from={marker.type_from!r}) "
+                    "does not name a field"
+                )
+        return fields
 
 
 @dataclass(frozen=True)

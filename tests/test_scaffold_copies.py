@@ -8,6 +8,7 @@ catches that. If a version ever needs its own behaviour in one of these files, d
 from COPIED for that version and say why.
 """
 
+import inspect
 from pathlib import Path
 
 import pytest
@@ -19,3 +20,10 @@ COPIED = ["utils.py", "validation.py"]
 @pytest.mark.parametrize("name", COPIED)
 def test_v2_copy_matches_the_scaffold(name):
     assert (PACKAGE / "v2" / name).read_text() == (PACKAGE / "scaffold" / name).read_text()
+
+
+def test_v2_references_matches_the_scaffold():
+    # References lives in base.py, which differs between versions, so compare the class alone.
+    from dug_data_model import scaffold, v2
+
+    assert inspect.getsource(v2.References) == inspect.getsource(scaffold.References)

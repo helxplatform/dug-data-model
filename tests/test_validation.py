@@ -126,10 +126,11 @@ class TestReferences:
             "Missing parents references: s1; Missing studies references: s2"
         )
 
-    def test_error_built_without_by_field_keeps_its_old_message(self):
+    def test_error_built_without_by_field_is_about_parents(self):
         error = MissingReferenceError({"b", "a"})
-        assert str(error) == "Missing parent references: a, b"
-        assert error.by_field == {"parent": {"a", "b"}}
+        assert str(error) == "Missing parents references: a, b"
+        assert error.reference_type == "parents"
+        assert error.by_field == {"parents": {"a", "b"}}
 
     def test_accepts_a_generator(self):
         assert find_missing_references(e for e in _document_tree()) == {}
@@ -216,6 +217,33 @@ class TestInconsistentReferences:
         assert find_inconsistent_references([orphan, lost, top]) == [
             "c: parent_type is 'resource' but parents is empty",
             "r: parent_type is 'study' but parents is empty",
+        ]
+
+    def test_a_literal_without_the_empty_string_requires_parents(self):
+        # Literal["study"] says every element of the class sits under a study, so a root of
+        # that class is reported; a class that can have roots includes "" in its Literal.
+        class UnderAStudy(DugElement):
+            type: Literal["under"] = "under"
+            parent_type: Literal["study"] = "study"
+
+        orphan = UnderAStudy(id="u", name="U", description="")
+        assert find_inconsistent_references([orphan]) == [
+            "u: parent_type is 'study' but parents is empty",
+        ]
+
+    def test_an_untyped_target_is_named_as_the_fault(self):
+        # DugElement leaves type a free string, so only the reference can catch it empty.
+        study = DugStudy(id="s1", name="Study", description="desc", section_list=["x"])
+        untyped = DugElement(id="x", name="X", description="")
+        assert find_inconsistent_references([study, untyped]) == [
+            "x: type is empty, but s1's section_list names it as a section",
+        ]
+
+    def test_types_starting_with_a_vowel_take_an(self):
+        study = DugStudy(id="s1", name="Study", description="desc", section_list=["i"])
+        item = DugElement(id="i", name="I", description="", type="item")
+        assert find_inconsistent_references([study, item]) == [
+            "s1: section_list names i, an item, not a section",
         ]
 
     def test_a_parent_type_assigned_after_loading_is_checked(self):
@@ -351,6 +379,15 @@ class TestInconsistentReferences:
             "own: parents lead back to own (own -> own)",
         ]
 
+    def test_a_cycle_is_reported_once_when_a_parent_is_named_twice(self):
+        own = DugResource(id="own", name="O", description="", parents=["own", "own"],
+                          parent_type="resource")
+        twin = DugResource(id="own", name="O", description="", parents=["own"],
+                           parent_type="resource")
+        assert find_inconsistent_references([own, twin]) == [
+            "own: parents lead back to own (own -> own)",
+        ]
+
     def test_shared_ancestors_are_not_a_cycle(self):
         # Two paths up to the same study meet, but never return to where they began.
         study, document, content = _document_tree()
@@ -383,6 +420,16 @@ class TestReferenceFieldsAreMarked:
         elem = _Tagged(id="t1", name="T", description="", keyword_list=["pain"],
                        file_list=[{"name": "README.pdf"}])
         assert find_missing_references([elem]) == {}
+
+    def test_type_from_must_name_a_field(self):
+        class Misnamed(DugElement):
+            see_also: Annotated[list[str], References(type_from="see_also_typ")] = Field(
+                default_factory=list
+            )
+
+        elem = Misnamed(id="m", name="M", description="")
+        with pytest.raises(TypeError, match=r"Misnamed\.see_also: .*'see_also_typ'"):
+            find_inconsistent_references([elem])
 
     def test_a_marked_field_is_a_reference_whatever_its_name(self):
         elem = _Tagged(id="t1", name="T", description="", see_also=["t2"])

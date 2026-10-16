@@ -52,12 +52,15 @@ class MissingReferenceError(ValueError):
 
     `missing_ids` holds every missing ID; `by_field` says which field each one came from, as
     `find_missing_references()` returns it, and the message lists them field by field.
+    `reference_type` names those fields, joined with "/" when there are several, such as
+    `"parents/variable_list"`. Before fields other than `parents` were checked it defaulted to
+    `"parent"`, which named no field; it now defaults to `"parents"`.
     """
 
     def __init__(
         self,
         missing_ids: set[str],
-        reference_type: str = "parent",
+        reference_type: str = "parents",
         by_field: dict[str, set[str]] | None = None,
     ):
         self.missing_ids = missing_ids
@@ -263,8 +266,11 @@ def _reference_field_problems(
                 return [f"{elem.id}: {marker.type_from} is {expected!r} but {field_name} is empty"]
     if not expected:
         return []
+    # A target with no type at all is at fault itself, so the problem is named after it.
     problems = [
-        f"{elem.id}: {field_name} names {ref}, a {target.type or 'untyped element'}, not a {expected}"
+        f"{elem.id}: {field_name} names {ref}, {_a(target.type)}, not {_a(expected)}"
+        if target.type
+        else f"{ref}: type is empty, but {elem.id}'s {field_name} names it as {_a(expected)}"
         for ref in refs
         for target in by_id.get(ref, ())
         if target.type != expected
@@ -288,6 +294,11 @@ def _from_parents_problems(elem: DugElement, by_id: _Index) -> list[str]:
                         f"{getattr(parent, field_name)!r}"
                     )
     return problems
+
+
+def _a(noun: str) -> str:
+    """Return *noun* after "a" or "an"; a type is one lower-case word, so a vowel decides."""
+    return f"{'an' if noun[:1] in 'aeiou' else 'a'} {noun}"
 
 
 def _not_allowed(elem: DugElement, field_name: str) -> str:
@@ -346,7 +357,8 @@ def _parent_cycles(by_id: _Index) -> list[str]:
     problems: list[str] = []
 
     def parents_of(id_: str) -> Iterator[str]:
-        return iter([p for elem in by_id[id_] for p in elem.parents if p in by_id])
+        # Deduped, or a parent named twice would report its cycle twice.
+        return iter(dict.fromkeys(p for elem in by_id[id_] for p in elem.parents if p in by_id))
 
     for start in by_id:
         if start in state:
