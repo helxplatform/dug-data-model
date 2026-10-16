@@ -117,10 +117,11 @@ class TestReferences:
             "Missing parents references: s1; Missing variable_list references: v1"
         )
 
-    def test_error_built_without_by_field_keeps_its_old_message(self):
+    def test_error_built_without_by_field_is_about_parents(self):
         error = MissingReferenceError({"b", "a"})
-        assert str(error) == "Missing parent references: a, b"
-        assert error.by_field == {"parent": {"a", "b"}}
+        assert str(error) == "Missing parents references: a, b"
+        assert error.reference_type == "parents"
+        assert error.by_field == {"parents": {"a", "b"}}
 
     def test_accepts_a_generator(self):
         assert find_missing_references(e for e in _study_tree()) == {}

@@ -51,12 +51,15 @@ class MissingReferenceError(ValueError):
 
     `missing_ids` holds every missing ID; `by_field` says which field each one came from, as
     `find_missing_references()` returns it, and the message lists them field by field.
+    `reference_type` names those fields, joined with "/" when there are several, such as
+    `"parents/variable_list"`. Before fields other than `parents` were checked it defaulted to
+    `"parent"`, which named no field; it now defaults to `"parents"`.
     """
 
     def __init__(
         self,
         missing_ids: set[str],
-        reference_type: str = "parent",
+        reference_type: str = "parents",
         by_field: dict[str, set[str]] | None = None,
     ):
         self.missing_ids = missing_ids
