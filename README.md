@@ -88,9 +88,9 @@ validate_references(elements)
 
 Use the scaffold CLI to generate a new data model version inside the package. It copies the
 scaffold's files rather than importing them, so a released version does not change when the
-scaffold does. `utils.py` and `validation.py` do not depend on the version, so they are kept
-identical in the scaffold and in `v2/`: make a fix in both, and `tests/test_scaffold_copies.py`
-fails if one is forgotten.
+scaffold does. `utils.py`, `validation.py` and the `References` class in `base.py` do not
+depend on the version, so they are kept identical in the scaffold and in `v2/`: make a fix in
+both, and `tests/test_scaffold_copies.py` fails if one is forgotten.
 
 ```bash
 # Create v3 of the data model
