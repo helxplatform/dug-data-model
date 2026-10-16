@@ -147,7 +147,8 @@ def find_inconsistent_references(elements: Iterable[DugElement]) -> list[str]:
       this check (the HEAL CDE output, for one) leave it empty (`_reference_field_problems()`).
     - A field marked `inherited`, such as `studies`, must name exactly what the element's
       parents imply: the parents of its `element_type`, and whatever the same field names on
-      the other parents (`_inherited_problem()`).
+      the other parents. An element with no parents must leave it empty, since nothing puts
+      it under what it names (`_inherited_problem()`).
     - A field marked `FromParents`, such as content's `license`, must equal the same field on
       each parent that has it (`_from_parents_problems()`).
     - `parents` may not go round in a cycle, which no tree can contain (`_parent_cycles()`).
@@ -306,9 +307,16 @@ def _inherited_problem(elem: DugElement, field_name: str, element_type: str, by_
     """Return a problem if *elem*'s inherited *field_name* is not what its parents imply.
 
     The parents imply those of them that are of *element_type*, and whatever the same field
-    names on the others. An element without parents is not checked, since there is nothing
-    to derive the field from, nor one whose parents do not all resolve.
+    names on the others. An element without parents implies nothing, so one that names
+    something anyway is reported: a query on the field would find it, but a walk down
+    `parents` from what it names would not. One whose parents do not all resolve is not
+    checked, since the parents in another file may imply the rest.
     """
+    named = set(getattr(elem, field_name))
+    if not elem.parents:
+        if not named:
+            return ""
+        return f"{elem.id}: {field_name} names {', '.join(sorted(named))}, but it has no parents"
     implied: set[str] = set()
     for parent_id in elem.parents:
         if parent_id not in by_id:
@@ -318,8 +326,7 @@ def _inherited_problem(elem: DugElement, field_name: str, element_type: str, by_
                 implied.add(parent.id)
             else:
                 implied.update(getattr(parent, field_name, ()))
-    named = set(getattr(elem, field_name))
-    if not elem.parents or named == implied:
+    if named == implied:
         return ""
     return (
         f"{elem.id}: {field_name} names {', '.join(sorted(named)) or 'nothing'}, but its parents "

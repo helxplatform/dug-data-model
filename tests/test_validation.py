@@ -297,12 +297,20 @@ class TestInconsistentReferences:
             "paper/pdf: studies names s1, but its parents put it under s1, s2",
         ]
 
-    def test_studies_are_not_checked_without_parents_or_with_one_missing(self):
+    def test_studies_are_not_checked_with_a_parent_missing(self):
+        # The missing parent may be in another file, and imply the studies named.
         study = DugStudy(id="s1", name="Study", description="desc")
-        orphan = DugResource(id="r", name="R", description="", studies=["s1"])
         stray = DugContent(id="c", name="C", description="",
                            license="CC-BY-4.0", content="", parents=["gone"])
-        assert find_inconsistent_references([study, orphan, stray]) == []
+        assert find_inconsistent_references([study, stray]) == []
+
+    def test_studies_without_parents(self):
+        # A walk down parents from s1 would never reach r, though a query on studies would.
+        study = DugStudy(id="s1", name="Study", description="desc")
+        orphan = DugResource(id="r", name="R", description="", studies=["s1"])
+        assert find_inconsistent_references([study, orphan]) == [
+            "r: studies names s1, but it has no parents",
+        ]
 
     def test_content_licence_must_match_its_resource(self):
         study, document, content = _document_tree()

@@ -120,8 +120,8 @@ that every `parents`, `studies`, `variable_list` and `section_list` ID resolves 
 points at the right type of element, and that each element's `studies` names exactly what its
 parents imply: the studies it hangs off directly, and the `studies` of the resources it hangs
 off. A content element whose `studies` was left empty fails, since a filter on `studies`
-would not find it, and so does one whose `license` differs from its resource's, and one
-with no parent.
+would not find it, and so does one whose `license` differs from its resource's, one with no
+parent, and a resource whose `studies` names a study it has no `parents` to hang under.
 
 Which file is "the" publication? The child whose `resource_type` matches its parent's, with
 a `mime_type`; there is no flag for it. [docs/resource-kinds.md](docs/resource-kinds.md#a-files-kind)
